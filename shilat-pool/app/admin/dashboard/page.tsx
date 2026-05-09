@@ -54,9 +54,9 @@ export default async function DashboardPage() {
         {/* Quick links */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           {[
+            { href: "/admin/testimonials", label: "ניהול המלצות" },
             { href: "/api/admin/members", label: "כל המנויים (JSON)" },
             { href: "/api/admin/early-access", label: "חלונות הרשמה" },
-            { href: "/api/admin/stats", label: "סטטיסטיקות" },
             { href: "/", label: "אתר ציבורי" },
           ].map((l) => (
             <Link

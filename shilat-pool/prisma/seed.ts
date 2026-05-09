@@ -98,6 +98,44 @@ const membershipTypes = [
   },
 ];
 
+const testimonials = [
+  {
+    name: "רונית כהן",
+    text: "בריכה מדהימה! המים נקיים, הצוות נחמד וחביב. הילדים שלנו מגיעים כל יום בקיץ וכבר לא רוצים לעזוב. ממליצה בחום לכל המשפחה!",
+    initials: "רכ",
+    color: "from-[#0C4A8B] to-[#1565C0]",
+    sortOrder: 1,
+  },
+  {
+    name: "דוד מזרחי",
+    text: "שחיין ותיק שמגיע כבר 10 שנים. הבריכה תמיד נקייה ומסודרת, המסלולים פנויים בשעות הבוקר ואפשר לשחות בנחת. שירות מעולה.",
+    initials: "דמ",
+    color: "from-[#00B4D8] to-[#0077B6]",
+    sortOrder: 2,
+  },
+  {
+    name: "מיכל לוי",
+    text: "הרשמנו את הילדים לשיעורי שחייה ותוך חודש הם כבר שוחים לבד! המדריכים מקצועיים ואדיבים. מנוי משפחתי שמשתלם מאוד.",
+    initials: "מל",
+    color: "from-[#1565C0] to-[#00B4D8]",
+    sortOrder: 3,
+  },
+  {
+    name: "יוסי שפירא",
+    text: "המחירים הכי טובים באזור והאיכות גבוהה. בריכה מחוממת, חניה נוחה, ומתקנים מעולים לילדים. בריכת שילת היא הבחירה הנכונה!",
+    initials: "יש",
+    color: "from-[#0C4A8B] to-[#00B4D8]",
+    sortOrder: 4,
+  },
+  {
+    name: "תמר אברהם",
+    text: "אנחנו מגיעים כמשפחה כבר שלוש עונות. האווירה משפחתית, כולם מכירים אחד את השני. זה יותר מסתם בריכה — זה מקום קהילתי נפלא.",
+    initials: "תא",
+    color: "from-[#1565C0] to-[#0C4A8B]",
+    sortOrder: 5,
+  },
+];
+
 async function main() {
   console.log("Seeding database...");
 
@@ -107,6 +145,13 @@ async function main() {
       update: type,
       create: type,
     });
+  }
+
+  for (const t of testimonials) {
+    const existing = await prisma.testimonial.findFirst({ where: { name: t.name } });
+    if (!existing) {
+      await prisma.testimonial.create({ data: t });
+    }
   }
 
   const passwordHash = await bcryptjs.hash("admin123", 12);
