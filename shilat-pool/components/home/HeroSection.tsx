@@ -1,12 +1,25 @@
 "use client";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#0C4A8B] via-[#1565C0] to-[#00B4D8] text-white min-h-[88vh] flex flex-col items-center justify-center">
+    <section className="relative overflow-hidden min-h-[90vh] flex flex-col items-center justify-center text-white">
+      {/* Background photo */}
+      <Image
+        src="/pool-hero.jpeg"
+        alt="בריכת שילת"
+        fill
+        className="object-cover object-center"
+        priority
+        unoptimized
+      />
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0C4A8B]/90 via-[#0C4A8B]/70 to-[#0077B6]/40" />
+
       {/* Animated waves */}
-      <div className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-0 h-56 pointer-events-none z-10">
         <svg
           className="absolute bottom-0 w-[200%] animate-wave"
           viewBox="0 0 1440 160"
@@ -41,7 +54,7 @@ export default function HeroSection() {
 
       {/* Content */}
       <motion.div
-        className="relative z-10 text-center px-4 max-w-3xl"
+        className="relative z-20 text-center px-4 max-w-3xl"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -55,10 +68,10 @@ export default function HeroSection() {
           עונת 2026 פתוחה להרשמה
         </motion.div>
 
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight drop-shadow-lg">
           בריכת שילת
         </h1>
-        <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-8 leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-8 leading-relaxed drop-shadow">
           בריכה מחוממת חצי-אולימפית מקורה · מושב שילת<br />
           <span className="text-[#F0C040] font-semibold">3 במאי – 3 באוקטובר 2026</span>
         </p>
@@ -72,7 +85,7 @@ export default function HeroSection() {
           </Link>
           <Link
             href="/early-access"
-            className="border-2 border-white hover:bg-white hover:text-[#0C4A8B] text-white font-bold px-6 py-4 rounded-full text-base sm:text-lg transition-all min-h-[48px] flex items-center justify-center"
+            className="border-2 border-white/80 hover:bg-white hover:text-[#0C4A8B] text-white font-bold px-6 py-4 rounded-full text-base sm:text-lg transition-all min-h-[48px] flex items-center justify-center backdrop-blur-sm bg-white/10"
           >
             הרשמה מוקדמת למנויי עבר
           </Link>
