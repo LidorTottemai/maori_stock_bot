@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model MembershipType {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  nameHe           String
+  descriptionHe    String
+  price            Int
+  earlyAccessPrice Int
+  maxAdults        Int      @default(1)
+  maxChildren      Int      @default(0)
+  features         String
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  registrations Registration[]
+}
+
+model Registration {
+  id                 String   @id @default(cuid())
+  confirmationNumber String   @unique @default(cuid())
+
+  firstName String
+  lastName  String
+  israeliId String
+  email     String
+  phone     String
+  city      String?
+
+  membershipTypeId String
+  membershipType   MembershipType @relation(fields: [membershipTypeId], references: [id])
+  priceCharged     Int
+
+  familyMembers FamilyMember[]
+
+  paymentStatus     String @default("PENDING")
+  mockTransactionId String?
+
+  isEarlyAccess       Boolean            @default(false)
+  earlyAccessWindowId String?
+  earlyAccessWindow   EarlyAccessWindow? @relation(fields: [earlyAccessWindowId], references: [id])
+
+  status String @default("ACTIVE")
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([israeliId])
+  @@index([email])
+}
+
+model FamilyMember {
+  id             String       @id @default(cuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id])
+  firstName      String
+  lastName       String
+  relation       String
+}
+
+model EarlyAccessWindow {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  opensAt     DateTime
+  closesAt    DateTime
+  isActive    Boolean  @default(true)
+
+  registrations Registration[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model PastMember {
+  id            String   @id @default(cuid())
+  israeliIdHmac String   @unique
+  addedAt       DateTime @default(now())
+  note          String?
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+}
