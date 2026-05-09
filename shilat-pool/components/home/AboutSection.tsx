@@ -1,8 +1,9 @@
 "use client";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import Link from "next/link";
 import { MdPool, MdChildCare, MdChair, MdShower } from "react-icons/md";
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const highlights = [
   { Icon: MdPool, label: "בריכה חצי-אולימפית מחוממת ומקורה" },
@@ -59,21 +60,13 @@ export default function AboutSection() {
 
           {/* Image */}
           <motion.div
-            className="relative h-80 lg:h-[500px] rounded-3xl overflow-hidden shadow-2xl"
+            className="h-80 lg:h-[500px] rounded-3xl overflow-hidden shadow-2xl bg-cover bg-center"
+            style={{ backgroundImage: `url('${BASE}/pool-hero.jpeg')` }}
             initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-          >
-            <Image
-              src="/pool-hero.jpeg"
-              alt="בריכת שילת"
-              fill
-              className="object-cover object-center"
-              unoptimized
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0C4A8B]/30 to-transparent" />
-          </motion.div>
+          />
         </div>
       </div>
     </section>

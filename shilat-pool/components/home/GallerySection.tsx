@@ -1,11 +1,12 @@
 "use client";
 import { motion } from "framer-motion";
-import Image from "next/image";
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const photos = [
-  { src: "/pool-hero.jpeg", alt: "בריכת שחייה חצי-אולימפית", span: "col-span-2 row-span-2" },
-  { src: "/pool-hero.jpeg", alt: "מתחם הבריכה", span: "col-span-1 row-span-1" },
-  { src: "/pool-hero.jpeg", alt: "בריכת שילת", span: "col-span-1 row-span-1" },
+  { src: "pool-hero.jpeg", alt: "בריכת שחייה חצי-אולימפית", span: "col-span-2 row-span-2" },
+  { src: "pool-hero.jpeg", alt: "מתחם הבריכה", span: "col-span-1 row-span-1" },
+  { src: "pool-hero.jpeg", alt: "בריכת שילת", span: "col-span-1 row-span-1" },
 ];
 
 export default function GallerySection() {
@@ -30,15 +31,12 @@ export default function GallerySection() {
           transition={{ duration: 0.5 }}
         >
           {photos.map((p, i) => (
-            <div key={i} className={`relative overflow-hidden ${p.span} group`}>
-              <Image
-                src={p.src}
-                alt={p.alt}
-                fill
-                className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                unoptimized
-              />
-              <div className="absolute inset-0 bg-[#0C4A8B]/0 group-hover:bg-[#0C4A8B]/20 transition-colors duration-300" />
+            <div
+              key={i}
+              className={`overflow-hidden ${p.span} group bg-cover bg-center transition-transform duration-500`}
+              style={{ backgroundImage: `url('${BASE}/${p.src}')` }}
+            >
+              <div className="w-full h-full bg-[#0C4A8B]/0 group-hover:bg-[#0C4A8B]/20 transition-colors duration-300" />
             </div>
           ))}
         </motion.div>

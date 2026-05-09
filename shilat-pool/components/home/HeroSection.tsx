@@ -1,19 +1,16 @@
 "use client";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import Link from "next/link";
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export default function HeroSection() {
   return (
     <section className="relative overflow-hidden min-h-[90vh] flex flex-col items-center justify-center text-white">
-      {/* Background photo */}
-      <Image
-        src="/pool-hero.jpeg"
-        alt="בריכת שילת"
-        fill
-        className="object-cover object-center"
-        priority
-        unoptimized
+      {/* Background photo — using CSS bg to respect basePath correctly */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url('${BASE}/pool-hero.jpeg')` }}
       />
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0C4A8B]/90 via-[#0C4A8B]/70 to-[#0077B6]/40" />
