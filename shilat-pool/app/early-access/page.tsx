@@ -43,16 +43,16 @@ export default function EarlyAccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0C4A8B] to-[#F0F7FF] py-16 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#0C4A8B] to-[#F0F7FF] py-12 px-4">
       <div className="max-w-md mx-auto">
         <motion.div
-          className="bg-white rounded-2xl shadow-xl p-8"
+          className="bg-white rounded-2xl shadow-xl p-6 sm:p-8"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="text-center mb-8">
+          <div className="text-center mb-7">
             <div className="text-5xl mb-3">🌊</div>
-            <h1 className="text-3xl font-black text-[#0C4A8B] mb-2">הרשמה מוקדמת</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-[#0C4A8B] mb-2">הרשמה מוקדמת</h1>
             <p className="text-slate-500 text-sm leading-relaxed">
               למנויי עבר בלבד — הזינו את תעודת הזהות שלכם לקבלת גישה מוקדמת עם מחירים מוזלים
             </p>
@@ -71,7 +71,7 @@ export default function EarlyAccessPage() {
                   value={israeliId}
                   onChange={(e) => setIsraeliId(e.target.value.replace(/\D/g, ""))}
                   placeholder="123456789"
-                  className={`w-full border rounded-xl px-4 py-3 text-xl text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-[#00B4D8] ${
+                  className={`w-full border rounded-xl px-4 py-4 text-xl text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-[#00B4D8] ${
                     error ? "border-red-400" : "border-slate-200"
                   }`}
                 />
@@ -81,7 +81,7 @@ export default function EarlyAccessPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#0C4A8B] disabled:opacity-60 hover:bg-[#0a3d74] text-white font-bold py-3 rounded-full transition-all"
+                className="w-full bg-[#0C4A8B] disabled:opacity-60 hover:bg-[#0a3d74] text-white font-bold py-4 rounded-full transition-all min-h-[48px]"
               >
                 {loading ? "בודק..." : "בדוק זכאות"}
               </button>
@@ -94,19 +94,20 @@ export default function EarlyAccessPage() {
             >
               <div className="text-4xl mb-4">😔</div>
               <h2 className="text-xl font-bold text-slate-700 mb-2">לא נמצאת ברשימת מנויי העבר</h2>
-              <p className="text-slate-500 text-sm mb-6">
-                אם אתם חושבים שיש טעות, פנו למנהל הבריכה: <a href="tel:0528405657" className="text-[#00B4D8] font-semibold">052-8405657</a>
+              <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+                אם אתם חושבים שיש טעות, פנו למנהל הבריכה:{" "}
+                <a href="tel:0528405657" className="text-[#00B4D8] font-semibold whitespace-nowrap">052-8405657</a>
               </p>
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => setNotEligible(false)}
-                  className="border border-[#0C4A8B] text-[#0C4A8B] font-semibold py-3 rounded-full hover:bg-blue-50 transition-all"
+                  className="border border-[#0C4A8B] text-[#0C4A8B] font-semibold py-4 rounded-full hover:bg-blue-50 transition-all min-h-[48px]"
                 >
                   נסה ת.ז. אחרת
                 </button>
                 <a
                   href="/register/personal"
-                  className="bg-[#0C4A8B] text-white font-bold py-3 rounded-full transition-all text-center"
+                  className="bg-[#0C4A8B] text-white font-bold py-4 rounded-full transition-all text-center min-h-[48px] flex items-center justify-center"
                 >
                   הרשמה במחיר רגיל
                 </a>

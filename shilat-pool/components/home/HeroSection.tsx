@@ -47,7 +47,7 @@ export default function HeroSection() {
         transition={{ duration: 0.8 }}
       >
         <motion.div
-          className="inline-block bg-[#F0C040] text-[#0C4A8B] text-sm font-bold px-4 py-1 rounded-full mb-6"
+          className="inline-block bg-[#F0C040] text-[#0C4A8B] text-xs sm:text-sm font-bold px-4 py-1.5 rounded-full mb-5"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -55,24 +55,24 @@ export default function HeroSection() {
           עונת 2026 פתוחה להרשמה
         </motion.div>
 
-        <h1 className="text-5xl md:text-7xl font-black mb-4 leading-tight">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight">
           בריכת שילת
         </h1>
-        <p className="text-xl md:text-2xl text-blue-100 mb-8 leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-8 leading-relaxed">
           בריכה מחוממת חצי-אולימפית מקורה · מושב שילת<br />
           <span className="text-[#F0C040] font-semibold">3 במאי – 3 באוקטובר 2026</span>
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/register/personal"
-            className="bg-[#F0C040] hover:bg-[#d4a800] text-[#0C4A8B] font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105 shadow-lg"
+            className="bg-[#F0C040] hover:bg-[#d4a800] text-[#0C4A8B] font-bold px-6 py-4 rounded-full text-base sm:text-lg transition-all hover:scale-105 shadow-lg min-h-[48px] flex items-center justify-center"
           >
             הרשמה למינוי
           </Link>
           <Link
             href="/early-access"
-            className="border-2 border-white hover:bg-white hover:text-[#0C4A8B] text-white font-bold px-8 py-4 rounded-full text-lg transition-all"
+            className="border-2 border-white hover:bg-white hover:text-[#0C4A8B] text-white font-bold px-6 py-4 rounded-full text-base sm:text-lg transition-all min-h-[48px] flex items-center justify-center"
           >
             הרשמה מוקדמת למנויי עבר
           </Link>

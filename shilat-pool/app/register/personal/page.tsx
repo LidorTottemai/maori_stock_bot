@@ -36,41 +36,92 @@ export default function PersonalPage() {
     router.push("/register/plan");
   }
 
-  const field = (name: keyof typeof form, label: string, type = "text", placeholder = "") => (
-    <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-1">{label}</label>
-      <input
-        type={type}
-        value={form[name]}
-        onChange={(e) => setForm({ ...form, [name]: e.target.value })}
-        placeholder={placeholder}
-        className={`w-full border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#00B4D8] ${
-          errors[name] ? "border-red-400" : "border-slate-200"
-        }`}
-      />
-      {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name]}</p>}
-    </div>
-  );
+  const inputClass = (name: string) =>
+    `w-full border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#00B4D8] ${
+      errors[name] ? "border-red-400" : "border-slate-200"
+    }`;
 
   return (
-    <div className="min-h-screen bg-[#F0F7FF] py-12 px-4">
+    <div className="min-h-screen bg-[#F0F7FF] py-8 px-4">
       <div className="max-w-lg mx-auto">
         <Stepper current={1} />
-        <div className="bg-white rounded-2xl shadow p-8">
-          <h1 className="text-2xl font-black text-[#0C4A8B] mb-6">פרטים אישיים</h1>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              {field("firstName", "שם פרטי")}
-              {field("lastName", "שם משפחה")}
+        <div className="bg-white rounded-2xl shadow p-6 sm:p-8">
+          <h1 className="text-xl sm:text-2xl font-black text-[#0C4A8B] mb-6">פרטים אישיים</h1>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name: stacked on mobile, side-by-side on sm+ */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">שם פרטי</label>
+                <input
+                  value={form.firstName}
+                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                  className={inputClass("firstName")}
+                />
+                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">שם משפחה</label>
+                <input
+                  value={form.lastName}
+                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                  className={inputClass("lastName")}
+                />
+                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+              </div>
             </div>
-            {field("israeliId", "תעודת זהות", "text", "123456789")}
-            {field("email", "אימייל", "email", "name@example.com")}
-            {field("phone", "טלפון", "tel", "050-0000000")}
-            {field("city", "עיר מגורים (אופציונלי)")}
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">תעודת זהות</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={9}
+                value={form.israeliId}
+                onChange={(e) => setForm({ ...form, israeliId: e.target.value.replace(/\D/g, "") })}
+                placeholder="123456789"
+                className={inputClass("israeliId")}
+              />
+              {errors.israeliId && <p className="text-red-500 text-xs mt-1">{errors.israeliId}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">אימייל</label>
+              <input
+                type="email"
+                inputMode="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="name@example.com"
+                className={inputClass("email")}
+              />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">טלפון</label>
+              <input
+                type="tel"
+                inputMode="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="050-0000000"
+                className={inputClass("phone")}
+              />
+              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">עיר מגורים (אופציונלי)</label>
+              <input
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                className={inputClass("city")}
+              />
+            </div>
 
             <button
               type="submit"
-              className="w-full bg-[#0C4A8B] hover:bg-[#0a3d74] text-white font-bold py-3 rounded-full transition-all"
+              className="w-full bg-[#0C4A8B] hover:bg-[#0a3d74] text-white font-bold py-4 rounded-full transition-all min-h-[48px]"
             >
               המשך לבחירת מינוי →
             </button>

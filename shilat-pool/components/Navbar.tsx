@@ -25,26 +25,28 @@ export default function Navbar() {
           </Link>
         </nav>
 
+        {/* Hamburger — 44px touch target */}
         <button
-          className="md:hidden p-2 rounded-md hover:bg-[#0a3d74] transition-colors"
+          className="md:hidden w-11 h-11 flex flex-col items-center justify-center gap-1.5 rounded-md hover:bg-[#0a3d74] transition-colors"
           onClick={() => setOpen(!open)}
           aria-label="תפריט"
+          aria-expanded={open}
         >
-          <span className="block w-5 h-0.5 bg-white mb-1" />
-          <span className="block w-5 h-0.5 bg-white mb-1" />
-          <span className="block w-5 h-0.5 bg-white" />
+          <span className={`block w-5 h-0.5 bg-white transition-transform ${open ? "rotate-45 translate-y-2" : ""}`} />
+          <span className={`block w-5 h-0.5 bg-white transition-opacity ${open ? "opacity-0" : ""}`} />
+          <span className={`block w-5 h-0.5 bg-white transition-transform ${open ? "-rotate-45 -translate-y-2" : ""}`} />
         </button>
       </div>
 
       {open && (
-        <div className="md:hidden bg-[#0a3d74] px-4 pb-4 flex flex-col gap-3 text-sm font-medium">
-          <Link href="/" onClick={() => setOpen(false)} className="py-2 hover:text-[#00B4D8] transition-colors">בית</Link>
-          <Link href="/membership" onClick={() => setOpen(false)} className="py-2 hover:text-[#00B4D8] transition-colors">מינויים ומחירים</Link>
-          <Link href="/early-access" onClick={() => setOpen(false)} className="py-2 hover:text-[#F0C040] transition-colors">הרשמה מוקדמת</Link>
+        <div className="md:hidden bg-[#0a3d74] px-4 pt-2 pb-6 flex flex-col gap-1 text-base font-medium">
+          <Link href="/" onClick={() => setOpen(false)} className="py-3 hover:text-[#00B4D8] transition-colors border-b border-white/10">בית</Link>
+          <Link href="/membership" onClick={() => setOpen(false)} className="py-3 hover:text-[#00B4D8] transition-colors border-b border-white/10">מינויים ומחירים</Link>
+          <Link href="/early-access" onClick={() => setOpen(false)} className="py-3 hover:text-[#F0C040] transition-colors border-b border-white/10">הרשמה מוקדמת למנויי עבר</Link>
           <Link
             href="/register/personal"
             onClick={() => setOpen(false)}
-            className="bg-[#00B4D8] text-white px-4 py-2 rounded-full text-center transition-colors"
+            className="mt-2 bg-[#00B4D8] text-white px-4 py-3 rounded-full text-center transition-colors"
           >
             הרשמה עכשיו
           </Link>
