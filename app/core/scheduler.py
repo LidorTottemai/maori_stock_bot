@@ -29,4 +29,20 @@ def setup_scheduler(app: FastAPI) -> AsyncIOScheduler:
         replace_existing=True,
     )
 
+    async def _daily_rebuild_job() -> None:
+        from app.services.rebuilder import process_rebuild_queue
+
+        logger.info("Scheduled daily rebuild triggered")
+        await process_rebuild_queue(
+            http_client=app.state.http_client,
+            settings=settings,
+        )
+
+    scheduler.add_job(
+        _daily_rebuild_job,
+        trigger=CronTrigger(hour=settings.rebuild_scan_hour, minute=settings.rebuild_scan_minute),
+        id="daily_rebuild",
+        replace_existing=True,
+    )
+
     return scheduler

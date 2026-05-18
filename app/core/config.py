@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     daily_scan_hour: int = 9
     daily_scan_minute: int = 0
 
+    # Rebuild pipeline
+    anthropic_api_key: str = ""
+    github_token: str = ""
+    github_username: str = ""
+    rebuild_daily_limit: int = 3
+    rebuild_scan_hour: int = 10
+    rebuild_scan_minute: int = 0
+    github_repos_private: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:
