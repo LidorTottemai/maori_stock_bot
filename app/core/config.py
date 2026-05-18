@@ -1,0 +1,47 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    google_maps_api_key: str = ""
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    min_booking_score: int = 40
+    daily_limit: int = 10
+    db_url: str = "sqlite:///./scanner.db"
+    daily_scan_hour: int = 9
+    daily_scan_minute: int = 0
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+# Static rotation data — not user-configurable
+CITIES: list[str] = [
+    "תל אביב", "ירושלים", "חיפה", "באר שבע",
+    "ראשון לציון", "פתח תקווה", "נתניה", "אשדוד",
+    "רמת גן", "הרצליה", "רעננה", "כפר סבא", "מודיעין",
+]
+
+SERVICE_CATEGORIES: list[str] = [
+    "בריכת שחיה", "חוג כושר", "מתנס", "סטודיו פילאטיס",
+    "סטודיו יוגה", "חדר כושר", "מספרה", "מכון יופי",
+    "קליניקה פיזיותרפיה", "ספא", "חוגי ריקוד", "חוגי אמנות",
+]
+
+RETAIL_CATEGORIES: list[str] = [
+    "חנות פרחים", "חנות בגדים", "חנות בשמים",
+    "חנות מתנות", "חנות תכשיטים", "חנות נעליים",
+    "חנות ילדים", "מאפייה", "קונדיטוריה", "חנות יודאיקה",
+]
+
+ALL_CATEGORIES: list[str] = SERVICE_CATEGORIES + RETAIL_CATEGORIES
