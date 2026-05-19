@@ -25,6 +25,7 @@ class Lead(SQLModel, table=True):
     scanned_at: datetime = Field(default_factory=datetime.utcnow)
     marketing_approved: bool = Field(default=False)
     marketing_approved_at: datetime | None = None
+    email: str = ""
 
     @property
     def findings(self) -> list[str]:

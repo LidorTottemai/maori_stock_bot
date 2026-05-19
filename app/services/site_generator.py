@@ -94,6 +94,15 @@ For shop type:
 29. app/[locale]/contact/page.tsx
 30. README.md
 
+### 6. PASSWORD GATE (mandatory)
+Implement site-wide password protection via middleware.ts.
+- Read env var SITE_PASSWORD at runtime
+- If SITE_PASSWORD is set: redirect all pages to /unlock unless cookie "site-auth" matches
+- /unlock page: clean centered form (password input + submit), RTL Hebrew, sets cookie on correct entry
+- If SITE_PASSWORD is empty: no redirect (development/open mode)
+- Exempt from redirect: /unlock, /_next/*, /favicon.ico, /api/*
+- Cookie "site-auth": httpOnly=false, maxAge=30days, sameSite=lax
+
 Write COMPLETE file contents — no placeholders, ellipses, or TODO comments.
 """
 

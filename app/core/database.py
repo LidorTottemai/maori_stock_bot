@@ -21,6 +21,7 @@ def get_engine():
 def create_db_and_tables() -> None:
     # Import models so SQLModel registers their metadata before create_all
     import app.models.lead  # noqa: F401
+    import app.models.outreach_contact  # noqa: F401
     import app.models.rebuild_job  # noqa: F401
     import app.models.scan_job  # noqa: F401
 

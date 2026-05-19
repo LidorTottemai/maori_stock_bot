@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     telegram_webhook_secret: str = ""
     report_hour: int = 8
     report_minute: int = 0
+    resend_api_key: str = ""
+    outreach_from_email: str = "hello@example.com"
+    outreach_price_ils: int = 1250
 
 
 @lru_cache

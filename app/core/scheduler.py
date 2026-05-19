@@ -61,4 +61,20 @@ def setup_scheduler(app: FastAPI) -> AsyncIOScheduler:
         replace_existing=True,
     )
 
+    async def _daily_outreach_job() -> None:
+        from app.services.outreach_scheduler import process_outreach
+
+        logger.info("Scheduled daily outreach triggered")
+        await process_outreach(
+            http_client=app.state.http_client,
+            settings=settings,
+        )
+
+    scheduler.add_job(
+        _daily_outreach_job,
+        trigger=CronTrigger(hour=12, minute=0),
+        id="daily_outreach",
+        replace_existing=True,
+    )
+
     return scheduler
