@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime
 
 import httpx
@@ -129,6 +130,21 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
         )
 
 
+def _find_top_candidate_lead(session: Session) -> Lead | None:
+    """Return the highest-scoring lead that has a website and no active/done rebuild job."""
+    already_queued = select(RebuildJob.lead_place_id).where(
+        RebuildJob.status != RebuildStatus.failed
+    )
+    return session.exec(
+        select(Lead)
+        .where(Lead.website != "")
+        .where(Lead.website.is_not(None))
+        .where(Lead.place_id.not_in(already_queued))
+        .order_by(Lead.score.desc())
+        .limit(1)
+    ).first()
+
+
 async def process_rebuild_queue(http_client: httpx.AsyncClient, settings: Settings) -> None:
     with Session(get_engine()) as session:
         jobs = session.exec(
@@ -139,6 +155,25 @@ async def process_rebuild_queue(http_client: httpx.AsyncClient, settings: Settin
         ).all()
         job_ids = [j.id for j in jobs]
 
-    logger.info("Daily rebuild: processing %d queued jobs", len(job_ids))
+    if not job_ids:
+        with Session(get_engine()) as session:
+            lead = _find_top_candidate_lead(session)
+            if lead:
+                logger.info(
+                    "Queue empty — auto-queuing top lead '%s' (score=%d)", lead.name, lead.score
+                )
+                job = RebuildJob(
+                    id=str(uuid.uuid4()),
+                    lead_place_id=lead.place_id,
+                    queued_at=datetime.utcnow(),
+                )
+                session.add(job)
+                session.commit()
+                job_ids = [job.id]
+            else:
+                logger.info("Queue empty and no eligible leads found — skipping")
+                return
+
+    logger.info("Daily rebuild: processing %d job(s)", len(job_ids))
     for job_id in job_ids:
         await run_rebuild_job(job_id, http_client, settings)
