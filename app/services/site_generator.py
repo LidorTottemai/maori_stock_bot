@@ -115,14 +115,27 @@ def _build_site_summary(site_map: SiteMap) -> str:
     return "\n".join(parts)
 
 
-def _build_claude_md(site_map: SiteMap, insights: CompetitorInsights, category: str) -> str:
+def _build_claude_md(
+    site_map: SiteMap,
+    insights: CompetitorInsights,
+    category: str,
+    fix_prompt: str | None = None,
+) -> str:
     phone_clean = site_map.phone.replace("-", "").replace(" ", "")
     standards = _MANDATORY_STANDARDS.replace("{PHONE}", phone_clean or "972XXXXXXXXX")
+    fix_section = ""
+    if fix_prompt:
+        fix_section = f"""
+## ⚡ FIX INSTRUCTIONS (highest priority — implement these changes first):
+{fix_prompt}
+
+Apply these specific changes ON TOP of rebuilding the site from the existing content above.
+"""
     return f"""# Build a Next.js 14 website for "{site_map.business_name}" ({category})
 
 You are a senior Next.js developer. Build a world-class, production-ready website.
 Write every file to this directory using the Write tool.
-
+{fix_section}
 ## EXISTING SITE CONTENT — copy text faithfully, modernize only the design:
 
 {_build_site_summary(site_map)}
@@ -143,6 +156,7 @@ async def generate_site(
     site_map: SiteMap,
     insights: CompetitorInsights,
     category: str,
+    fix_prompt: str | None = None,
     settings: Settings,
 ) -> dict[str, str]:
     project_dir = Path(tempfile.mkdtemp(prefix="rebuild-"))
@@ -151,7 +165,7 @@ async def generate_site(
     try:
         # Write CLAUDE.md with all instructions
         (project_dir / "CLAUDE.md").write_text(
-            _build_claude_md(site_map, insights, category),
+            _build_claude_md(site_map, insights, category, fix_prompt=fix_prompt),
             encoding="utf-8",
         )
 

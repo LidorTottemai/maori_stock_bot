@@ -29,4 +29,7 @@ class RebuildJob(SQLModel, table=True):
     files_generated: int = 0
     repo_url: str | None = None
     repo_name: str | None = None
+    vercel_url: str | None = None
+    fix_prompt: str | None = None
+    priority: int = Field(default=0)
     error: str | None = None

@@ -45,4 +45,20 @@ def setup_scheduler(app: FastAPI) -> AsyncIOScheduler:
         replace_existing=True,
     )
 
+    async def _daily_report_job() -> None:
+        from app.services.daily_report import send_daily_report
+
+        logger.info("Scheduled daily report triggered")
+        await send_daily_report(
+            http_client=app.state.http_client,
+            settings=settings,
+        )
+
+    scheduler.add_job(
+        _daily_report_job,
+        trigger=CronTrigger(hour=settings.report_hour, minute=settings.report_minute),
+        id="daily_report",
+        replace_existing=True,
+    )
+
     return scheduler

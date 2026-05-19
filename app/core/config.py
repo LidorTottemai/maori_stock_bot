@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     rebuild_scan_hour: int = 10
     rebuild_scan_minute: int = 0
     github_repos_private: bool = False
+    vercel_token: str = ""
+    telegram_webhook_secret: str = ""
+    report_hour: int = 8
+    report_minute: int = 0
 
 
 @lru_cache

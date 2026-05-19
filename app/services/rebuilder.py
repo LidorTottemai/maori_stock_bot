@@ -13,6 +13,7 @@ from app.services.competitor_researcher import CompetitorInsights, research_comp
 from app.services.github_client import create_repo_and_push
 from app.services.playwright_inspector import crawl_site
 from app.services.site_generator import generate_site
+from app.services.vercel_client import create_and_deploy
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
         lead_website = lead.website
         lead_category = lead.category or "עסק"
         lead_name = lead.name
+        fix_prompt = job.fix_prompt
 
     _update_job(
         job_id,
@@ -90,7 +92,7 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
     )
 
     try:
-        files = await generate_site(site_map, insights, lead_category, settings)
+        files = await generate_site(site_map, insights, lead_category, settings, fix_prompt=fix_prompt)
         _update_job(
             job_id,
             files_generated=len(files),
@@ -111,15 +113,25 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
     try:
         business_name = site_map.business_name or lead_name
         repo_url, repo_name = await create_repo_and_push(business_name, files, settings, http_client)
+
+        vercel_url: str | None = None
+        if settings.vercel_token and settings.github_username:
+            try:
+                _update_job(job_id, current_phase="מגדיר Vercel deployment...")
+                vercel_url = await create_and_deploy(repo_name, settings.github_username, settings, http_client)
+            except Exception as vercel_exc:
+                logger.warning("Vercel deploy failed (non-fatal): %s", vercel_exc)
+
         _update_job(
             job_id,
             status=RebuildStatus.done,
             repo_url=repo_url,
             repo_name=repo_name,
+            vercel_url=vercel_url,
             current_phase="הושלם בהצלחה!",
             finished_at=datetime.utcnow(),
         )
-        logger.info("Rebuild complete for '%s' → %s", lead_name, repo_url)
+        logger.info("Rebuild complete for '%s' → %s", lead_name, vercel_url or repo_url)
     except Exception as exc:
         logger.exception("GitHub push failed for job %s", job_id)
         _update_job(
@@ -150,7 +162,7 @@ async def process_rebuild_queue(http_client: httpx.AsyncClient, settings: Settin
         jobs = session.exec(
             select(RebuildJob)
             .where(RebuildJob.status == RebuildStatus.queued)
-            .order_by(RebuildJob.queued_at)
+            .order_by(RebuildJob.priority.desc(), RebuildJob.queued_at.asc())
             .limit(settings.rebuild_daily_limit)
         ).all()
         job_ids = [j.id for j in jobs]

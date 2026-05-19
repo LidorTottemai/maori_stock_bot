@@ -23,6 +23,8 @@ class Lead(SQLModel, table=True):
     has_booking_system: bool = False
     scan_job_id: str | None = Field(default=None, foreign_key="scan_job.id")
     scanned_at: datetime = Field(default_factory=datetime.utcnow)
+    marketing_approved: bool = Field(default=False)
+    marketing_approved_at: datetime | None = None
 
     @property
     def findings(self) -> list[str]:
