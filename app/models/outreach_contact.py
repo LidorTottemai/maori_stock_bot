@@ -11,6 +11,7 @@ class OutreachStage(str, Enum):
     reminder = "reminder"
     discount = "discount"
     final = "final"
+    recycled = "recycled"
 
 
 class OutreachContact(SQLModel, table=True):
@@ -26,3 +27,7 @@ class OutreachContact(SQLModel, table=True):
     reminder_sent_at: datetime | None = None
     discount_sent_at: datetime | None = None
     final_sent_at: datetime | None = None
+    opted_out: bool = Field(default=False)
+    opted_out_at: datetime | None = None
+    recycled_at: datetime | None = None
+    recycled_to_place_id: str | None = None

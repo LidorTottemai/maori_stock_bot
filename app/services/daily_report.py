@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from app.core.config import Settings
 from app.core.database import get_engine
 from app.models.lead import Lead
+from app.models.outreach_contact import OutreachContact, OutreachStage
 from app.models.rebuild_job import RebuildJob, RebuildStatus
 
 logger = logging.getLogger(__name__)
@@ -106,3 +107,41 @@ async def send_daily_report(http_client: httpx.AsyncClient, settings: Settings) 
         )
 
     logger.info("Daily report sent: %d business cards", min(len(rows), 10))
+
+    # ── Outreach section ────────────────────────────────────────────────────
+    _STAGE_LABEL = {
+        OutreachStage.initial:  "יום 0",
+        OutreachStage.reminder: "יום 7",
+        OutreachStage.discount: "יום 20",
+        OutreachStage.final:    "יום 30 ⏰",
+    }
+
+    with Session(get_engine()) as session:
+        active_contacts = session.exec(
+            select(OutreachContact, Lead)
+            .join(Lead, OutreachContact.lead_place_id == Lead.place_id)
+            .where(OutreachContact.stage.in_([
+                OutreachStage.initial, OutreachStage.reminder,
+                OutreachStage.discount, OutreachStage.final,
+            ]))
+            .where(OutreachContact.opted_out == False)  # noqa: E712
+            .limit(8)
+        ).all()
+
+    if active_contacts:
+        await _send_message(
+            f"📧 <b>קמפיין outreach פעיל — {len(active_contacts)} עסקים</b>",
+            settings=settings,
+            client=http_client,
+        )
+        for contact, lead in active_contacts:
+            label = _STAGE_LABEL.get(contact.stage, contact.stage)
+            text = f"📧 <b>{lead.name}</b> | {label} | {lead.category}"
+            await _send_message(
+                text,
+                settings=settings,
+                client=http_client,
+                reply_markup={"inline_keyboard": [[
+                    {"text": "🗑 הסר מרשימה", "callback_data": f"optout:{lead.place_id}"}
+                ]]},
+            )

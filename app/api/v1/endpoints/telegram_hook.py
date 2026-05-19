@@ -3,11 +3,12 @@ from datetime import datetime
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.config import Settings, get_settings
-from app.core.database import get_session
+from app.core.database import get_engine, get_session
 from app.models.lead import Lead
+from app.models.outreach_contact import OutreachContact
 from app.models.rebuild_job import RebuildJob
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
@@ -95,6 +96,19 @@ async def telegram_webhook(
                 await _answer_callback(callback_id, f"✅ {lead.name} אושר לשיווק!", settings, client)
             else:
                 await _answer_callback(callback_id, "שגיאה: עסק לא נמצא", settings, client)
+
+        elif action == "optout" and len(parts) == 2:
+            place_id = parts[1]
+            with Session(get_engine()) as db:
+                contact = db.exec(
+                    select(OutreachContact).where(OutreachContact.lead_place_id == place_id)
+                ).first()
+                if contact and not contact.opted_out:
+                    contact.opted_out = True
+                    contact.opted_out_at = datetime.utcnow()
+                    db.add(contact)
+                    db.commit()
+            await _answer_callback(callback_id, "✅ הוסר מרשימת התפוצה", settings, client)
 
     # ── Text message (fix prompt reply) ────────────────────────────────────
     elif "message" in data and "text" in data["message"]:
