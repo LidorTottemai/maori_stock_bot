@@ -20,7 +20,6 @@ class Settings(BaseSettings):
     daily_scan_minute: int = 0
 
     # Rebuild pipeline
-    anthropic_api_key: str = ""
     github_token: str = ""
     github_username: str = ""
     rebuild_daily_limit: int = 3

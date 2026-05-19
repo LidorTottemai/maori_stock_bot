@@ -1,6 +1,9 @@
+import asyncio
+import json
 import logging
-
-import anthropic
+import shutil
+import tempfile
+from pathlib import Path
 
 from app.core.config import Settings
 from app.services.competitor_researcher import CompetitorInsights
@@ -8,59 +11,14 @@ from app.services.playwright_inspector import SiteMap
 
 logger = logging.getLogger(__name__)
 
-_WRITE_FILE_TOOL = {
-    "name": "write_file",
-    "description": "Write a file to the Next.js project being built.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "File path relative to project root, e.g. components/Navbar.tsx",
-            },
-            "content": {
-                "type": "string",
-                "description": "Complete file content — no placeholders or TODOs",
-            },
-        },
-        "required": ["path", "content"],
-    },
+_CLAUDE_SETTINGS = {
+    "permissions": {
+        "allow": ["Read", "Write", "Edit", "Bash(npm *)", "Bash(npx *)"],
+        "defaultMode": "dontAsk",
+    }
 }
 
-_FINISH_TOOL = {
-    "name": "finish",
-    "description": "Signal that all project files have been written and the project is complete.",
-    "input_schema": {"type": "object", "properties": {}, "required": []},
-}
-
-
-def _build_site_summary(site_map: SiteMap) -> str:
-    parts = [
-        f"Business Name: {site_map.business_name}",
-        f"Phone: {site_map.phone}",
-        f"Address: {site_map.address}",
-        "",
-    ]
-    for page in site_map.pages[:6]:
-        parts.append(f"Page: {page.url}")
-        parts.append(f"Title: {page.title}")
-        if page.headings:
-            parts.append("Headings: " + " | ".join(page.headings[:8]))
-        parts.append(f"Content: {page.body_text[:600]}")
-        parts.append("")
-    return "\n".join(parts)
-
-
-def _build_prompt(site_map: SiteMap, insights: CompetitorInsights, category: str) -> str:
-    phone_clean = site_map.phone.replace("-", "").replace(" ", "")
-    return f"""You are a senior Next.js developer. Build a world-class, production-ready website for "{site_map.business_name}" ({category}).
-
-## EXISTING SITE CONTENT — copy text faithfully, modernize only the design:
-{_build_site_summary(site_map)}
-
-## DESIGN INSPIRATION FROM TOP INDUSTRY SITES:
-{insights.summary_for_claude}
-
+_MANDATORY_STANDARDS = """
 ## MANDATORY STANDARDS — implement every single one:
 
 ### 1. FULL RESPONSIVENESS
@@ -69,36 +27,38 @@ def _build_prompt(site_map: SiteMap, insights: CompetitorInsights, category: str
 - Touch-friendly targets (min 44×44px)
 
 ### 2. ONLINE PURCHASING
-Determine bookingType from the business type:
+Determine bookingType from the business:
 - Services (gym, yoga, pool, clinic, salon): bookingType = "appointment"
-  → Date + time picker form, service selection, WhatsApp deeplink: wa.me/{phone_clean or '972XXXXXXXXX'}
+  → Date + time picker, service selection, WhatsApp deeplink (wa.me/{PHONE})
 - Retail (shop, store, bakery): bookingType = "shop"
-  → Cart context provider, product grid, Stripe checkout (env: STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  → Cart context, product grid, Stripe checkout (env: STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 
 ### 3. DESIGN EXCELLENCE
-- shadcn/ui components (cn utility, Button, Card, Badge, Input, Label)
+- shadcn/ui components (Button, Card, Badge, Input, Label — use cn() utility)
 - Framer Motion: hero entrance (fadeInUp), scroll-triggered section reveals (viewport: once)
-- WCAG AA contrast, consistent spacing (4/8/16/24/32/48px)
-- Derive a 4-color palette from existing brand colors + competitors
+- WCAG AA contrast, consistent spacing (4/8/16/24/32/48px scale)
+- 4-color brand palette derived from existing site colors
 
 ### 4. i18n WITH next-intl
-- messages/he.json — ALL Hebrew content extracted from site
-- messages/en.json — English translation of every key
-- app/[locale]/layout.tsx — locale routing (he default, en)
-- middleware.ts — next-intl createMiddleware
-- Language switcher in Navbar (flag or he/en toggle)
+- messages/he.json — ALL Hebrew content extracted from the existing site
+- messages/en.json — English translation of every key in he.json
+- app/[locale]/layout.tsx with locale routing (he default, en secondary)
+- middleware.ts — createMiddleware from next-intl/middleware
+- Language switcher in Navbar (he ⇌ en)
 - hreflang alternate links in layout <head>
-- next.config.ts must use withNextIntl plugin
+- next.config.ts must wrap with withNextIntl plugin
 
 ### 5. SEO BEST PRACTICES
 - generateMetadata() in every page (title, description, openGraph, twitter)
-- app/[locale]/sitemap.ts returning all locale URLs
+- app/[locale]/sitemap.ts — returns all locale+path combinations
 - app/robots.ts
-- JSON-LD LocalBusiness schema injected in layout <head> via <script type="application/ld+json">
-- All images via next/image with width, height, alt
-- Canonical URLs, <link rel="alternate" hreflang>
+- JSON-LD LocalBusiness schema in layout <head> via <script type="application/ld+json">
+- All images via next/image with explicit width, height, alt
+- Canonical URLs and hreflang alternate links
+"""
 
-## WRITE FILES IN THIS ORDER:
+_FILE_ORDER = """
+## WRITE FILES IN THIS ORDER (use the Write tool for each):
 1. business.config.json
 2. messages/he.json
 3. messages/en.json
@@ -122,15 +82,61 @@ Determine bookingType from the business type:
 21. components/home/StatsSection.tsx
 22. components/home/CtaSection.tsx
 23. lib/config.ts
-(then booking or shop files depending on type)
-24a. components/booking/BookingForm.tsx + app/[locale]/booking/page.tsx
-   OR
-24b. components/shop/CartContext.tsx + components/shop/ProductCard.tsx + app/[locale]/shop/page.tsx + app/api/checkout/route.ts + lib/stripe.ts
-25. app/[locale]/contact/page.tsx
-26. README.md
+For appointment type:
+  24. components/booking/BookingForm.tsx
+  25. app/[locale]/booking/page.tsx
+For shop type:
+  24. components/shop/CartContext.tsx
+  25. components/shop/ProductCard.tsx
+  26. app/[locale]/shop/page.tsx
+  27. app/api/checkout/route.ts
+  28. lib/stripe.ts
+29. app/[locale]/contact/page.tsx
+30. README.md
 
 Write COMPLETE file contents — no placeholders, ellipses, or TODO comments.
-Call write_file for each file, then call finish."""
+"""
+
+
+def _build_site_summary(site_map: SiteMap) -> str:
+    parts = [
+        f"Business Name: {site_map.business_name}",
+        f"Phone: {site_map.phone}",
+        f"Address: {site_map.address}",
+        "",
+    ]
+    for page in site_map.pages[:6]:
+        parts.append(f"### Page: {page.url}")
+        parts.append(f"Title: {page.title}")
+        if page.headings:
+            parts.append("Headings: " + " | ".join(page.headings[:8]))
+        parts.append(f"Content:\n{page.body_text[:800]}")
+        parts.append("")
+    return "\n".join(parts)
+
+
+def _build_claude_md(site_map: SiteMap, insights: CompetitorInsights, category: str) -> str:
+    phone_clean = site_map.phone.replace("-", "").replace(" ", "")
+    standards = _MANDATORY_STANDARDS.replace("{PHONE}", phone_clean or "972XXXXXXXXX")
+    return f"""# Build a Next.js 14 website for "{site_map.business_name}" ({category})
+
+You are a senior Next.js developer. Build a world-class, production-ready website.
+Write every file to this directory using the Write tool.
+
+## EXISTING SITE CONTENT — copy text faithfully, modernize only the design:
+
+{_build_site_summary(site_map)}
+
+## TOP INDUSTRY DESIGN PATTERNS (from competitor research):
+
+{insights.summary_for_claude}
+
+{standards}
+
+{_FILE_ORDER}
+
+Start now. Write each file completely before moving to the next.
+"""
 
 
 async def generate_site(
@@ -139,55 +145,69 @@ async def generate_site(
     category: str,
     settings: Settings,
 ) -> dict[str, str]:
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    prompt = _build_prompt(site_map, insights, category)
-    messages: list[dict] = [{"role": "user", "content": prompt}]
-    files: dict[str, str] = {}
-    max_rounds = 20
+    project_dir = Path(tempfile.mkdtemp(prefix="rebuild-"))
+    logger.info("Generating site in %s", project_dir)
 
-    for round_num in range(max_rounds):
-        logger.info("Generation round %d, files so far: %d", round_num + 1, len(files))
-        response = await client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=8096,
-            tools=[_WRITE_FILE_TOOL, _FINISH_TOOL],
-            messages=messages,
+    try:
+        # Write CLAUDE.md with all instructions
+        (project_dir / "CLAUDE.md").write_text(
+            _build_claude_md(site_map, insights, category),
+            encoding="utf-8",
         )
 
-        tool_results = []
-        finished = False
+        # Pre-approve tools so no permission prompts interrupt the subprocess
+        dot_claude = project_dir / ".claude"
+        dot_claude.mkdir()
+        (dot_claude / "settings.json").write_text(
+            json.dumps(_CLAUDE_SETTINGS, indent=2),
+            encoding="utf-8",
+        )
 
-        for block in response.content:
-            if block.type == "tool_use":
-                if block.name == "write_file":
-                    path: str = block.input["path"]
-                    content: str = block.input["content"]
-                    files[path] = content
-                    logger.info("  wrote %s (%d chars)", path, len(content))
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": "ok",
-                    })
-                elif block.name == "finish":
-                    finished = True
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": "Project complete",
-                    })
+        proc = await asyncio.create_subprocess_exec(
+            "claude",
+            "-p",
+            "--permission-mode", "dontAsk",
+            "--max-turns", "30",
+            "Read CLAUDE.md thoroughly, then build the complete Next.js project as specified. "
+            "Write every file listed in CLAUDE.md to this directory.",
+            cwd=str(project_dir),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
 
-        if finished:
-            logger.info("Site generation complete: %d files", len(files))
-            return files
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=1800)
+        except asyncio.TimeoutError:
+            proc.kill()
+            raise RuntimeError("Site generation timed out after 30 minutes")
 
-        if response.stop_reason == "end_turn" and not tool_results:
-            logger.warning("Agent stopped without finish after %d files", len(files))
-            return files
+        if proc.returncode != 0:
+            err = stderr.decode(errors="replace")[:600]
+            raise RuntimeError(f"Claude Code exited {proc.returncode}: {err}")
 
-        messages.append({"role": "assistant", "content": response.content})
-        if tool_results:
-            messages.append({"role": "user", "content": tool_results})
+        logger.info("Claude Code finished. stdout preview: %s", stdout.decode(errors="replace")[:300])
 
-    logger.warning("Reached max rounds, returning %d files", len(files))
-    return files
+        # Collect all generated files
+        files: dict[str, str] = {}
+        skip_prefixes = {".claude", "node_modules", ".git"}
+        skip_names = {"CLAUDE.md"}
+
+        for fp in project_dir.rglob("*"):
+            if not fp.is_file():
+                continue
+            rel = fp.relative_to(project_dir)
+            parts = rel.parts
+            if parts[0] in skip_prefixes or rel.name in skip_names:
+                continue
+            if any(p in skip_prefixes for p in parts):
+                continue
+            try:
+                files[str(rel)] = fp.read_text(encoding="utf-8")
+            except Exception:
+                pass  # skip binary files
+
+        logger.info("Collected %d generated files", len(files))
+        return files
+
+    finally:
+        shutil.rmtree(project_dir, ignore_errors=True)
