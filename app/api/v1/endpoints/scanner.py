@@ -5,7 +5,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session, select
 
 from app.core.config import ALL_CATEGORIES, CITIES, Settings, get_settings
-from app.core.database import get_session
+from app.core.database import get_engine, get_session
+from app.models.lead import Lead
 from app.models.scan_job import ScanJob, ScanStatus
 from app.schemas.scan import RotationRead, ScanJobRead, ScanRequest
 from app.services.scanner import pick_todays_rotation, run_scan_job
@@ -77,3 +78,47 @@ def get_rotation() -> RotationRead:
         all_cities=CITIES,
         all_categories=ALL_CATEGORIES,
     )
+
+
+@router.post("/send-leads-report", status_code=202)
+async def send_leads_report(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+):
+    """Send top leads to Telegram immediately."""
+    from app.services.daily_report import _send_message
+
+    http_client = _get_http_client(request)
+
+    with Session(get_engine()) as session:
+        leads = session.exec(
+            select(Lead)
+            .where(Lead.score > 0)
+            .order_by(Lead.score.desc())
+            .limit(10)
+        ).all()
+
+    if not leads:
+        await _send_message("🔍 אין לידים עדיין — הרץ סריקה קודם.", settings=settings, client=http_client)
+        return {"detail": "No leads found"}
+
+    await _send_message(
+        f"🔍 <b>לידים מהסריקה האחרונה — {len(leads)} עסקים</b>",
+        settings=settings,
+        client=http_client,
+    )
+
+    for lead in leads:
+        findings = "\n".join(lead.findings[:3]) if lead.findings else "—"
+        text = (
+            f"<b>{lead.name}</b>\n"
+            f"ניקוד: {lead.score} | {lead.category} | {lead.city}\n"
+            f"📞 {lead.phone}\n"
+            f"🌐 {lead.website}\n"
+            f"{findings}"
+        )
+        buttons = [[{"text": "🏗 בנה אתר", "callback_data": f"queue:{lead.place_id}"}]]
+        await _send_message(text, settings=settings, client=http_client,
+                            reply_markup={"inline_keyboard": buttons})
+
+    return {"detail": f"Sent {len(leads)} leads to Telegram"}
