@@ -9,7 +9,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_engine, get_session
 from app.models.lead import Lead
 from app.models.outreach_contact import OutreachContact
-from app.models.rebuild_job import RebuildJob
+from app.models.rebuild_job import RebuildJob, RebuildStatus
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
@@ -88,7 +88,14 @@ async def telegram_webhook(
         elif action == "queue" and len(parts) == 2:
             place_id = parts[1]
             lead = session.get(Lead, place_id)
-            if lead and lead.website:
+            existing = session.exec(
+                select(RebuildJob)
+                .where(RebuildJob.lead_place_id == place_id)
+                .where(RebuildJob.status != RebuildStatus.failed)
+            ).first()
+            if existing:
+                await _answer_callback(callback_id, "⚠️ העסק כבר בתור הבנייה", settings, client)
+            elif lead and lead.website:
                 new_job = RebuildJob(
                     id=str(uuid.uuid4()),
                     lead_place_id=place_id,
