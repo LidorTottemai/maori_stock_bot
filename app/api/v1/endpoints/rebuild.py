@@ -101,3 +101,16 @@ async def run_rebuild_now(
 
     background_tasks.add_task(process_rebuild_queue, _app.state.http_client, settings)
     return {"detail": "Rebuild queue processor started"}
+
+
+@router.post("/send-report", status_code=202)
+async def send_report_now(
+    background_tasks: BackgroundTasks,
+    settings: Settings = Depends(get_settings),
+):
+    """Send the daily Telegram report immediately (for debugging)."""
+    from app.main import app as _app
+    from app.services.daily_report import send_daily_report
+
+    background_tasks.add_task(send_daily_report, _app.state.http_client, settings)
+    return {"detail": "Daily report sending..."}
