@@ -85,6 +85,22 @@ async def telegram_webhook(
                 reply_markup={"force_reply": True, "selective": True},
             )
 
+        elif action == "queue" and len(parts) == 2:
+            place_id = parts[1]
+            lead = session.get(Lead, place_id)
+            if lead and lead.website:
+                new_job = RebuildJob(
+                    id=str(uuid.uuid4()),
+                    lead_place_id=place_id,
+                    priority=0,
+                    queued_at=datetime.utcnow(),
+                )
+                session.add(new_job)
+                session.commit()
+                await _answer_callback(callback_id, f"✅ {lead.name} נוסף לתור הבנייה!", settings, client)
+            else:
+                await _answer_callback(callback_id, "שגיאה: עסק ללא אתר", settings, client)
+
         elif action == "approve" and len(parts) == 2:
             place_id = parts[1]
             lead = session.get(Lead, place_id)
