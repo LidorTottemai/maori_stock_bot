@@ -28,6 +28,24 @@ async def _answer_callback(callback_id: str, text: str, settings: Settings, clie
         pass
 
 
+async def _edit_button(
+    chat_id: int,
+    message_id: int,
+    new_keyboard: list,
+    settings: Settings,
+    client: httpx.AsyncClient,
+) -> None:
+    try:
+        await client.post(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/editMessageReplyMarkup",
+            json={"chat_id": chat_id, "message_id": message_id,
+                  "reply_markup": {"inline_keyboard": new_keyboard}},
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
 async def _send(chat_id: int, text: str, settings: Settings, client: httpx.AsyncClient, reply_markup: dict | None = None) -> None:
     payload: dict = {
         "chat_id": chat_id,
@@ -87,6 +105,7 @@ async def telegram_webhook(
 
         elif action == "queue" and len(parts) == 2:
             place_id = parts[1]
+            message_id = query["message"]["message_id"]
             lead = session.get(Lead, place_id)
             existing = session.exec(
                 select(RebuildJob)
@@ -105,8 +124,29 @@ async def telegram_webhook(
                 session.add(new_job)
                 session.commit()
                 await _answer_callback(callback_id, f"✅ {lead.name} נוסף לתור הבנייה!", settings, client)
+                await _edit_button(chat_id, message_id,
+                    [[{"text": "❌ בטל בנייה", "callback_data": f"dequeue:{place_id}"}]],
+                    settings, client)
             else:
                 await _answer_callback(callback_id, "שגיאה: עסק ללא אתר", settings, client)
+
+        elif action == "dequeue" and len(parts) == 2:
+            place_id = parts[1]
+            message_id = query["message"]["message_id"]
+            job = session.exec(
+                select(RebuildJob)
+                .where(RebuildJob.lead_place_id == place_id)
+                .where(RebuildJob.status == RebuildStatus.queued)
+            ).first()
+            if job:
+                session.delete(job)
+                session.commit()
+                await _answer_callback(callback_id, "🗑 הוסר מהתור", settings, client)
+                await _edit_button(chat_id, message_id,
+                    [[{"text": "🏗 בנה אתר", "callback_data": f"queue:{place_id}"}]],
+                    settings, client)
+            else:
+                await _answer_callback(callback_id, "⚠️ הבנייה כבר התחילה — לא ניתן לבטל", settings, client)
 
         elif action == "approve" and len(parts) == 2:
             place_id = parts[1]
