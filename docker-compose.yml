@@ -11,6 +11,7 @@ services:
       - app_data:/data                    # SQLite persistence across restarts
     environment:
       DB_URL: sqlite:////data/scanner.db
+      TZ: Asia/Jerusalem
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s
