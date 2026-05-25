@@ -165,8 +165,8 @@ async def generate_site(
     site_map: SiteMap,
     insights: CompetitorInsights,
     category: str,
-    fix_prompt: str | None = None,
     settings: Settings,
+    fix_prompt: str | None = None,
 ) -> dict[str, str]:
     project_dir = Path(tempfile.mkdtemp(prefix="rebuild-"))
     logger.info("Generating site in %s", project_dir)

@@ -66,6 +66,13 @@ async def send_daily_report(http_client: httpx.AsyncClient, settings: Settings) 
             select(RebuildJob).where(RebuildJob.status == RebuildStatus.queued)
         ).all()
 
+        active_count = session.exec(
+            select(RebuildJob).where(RebuildJob.status.in_([
+                RebuildStatus.scraping, RebuildStatus.researching,
+                RebuildStatus.generating, RebuildStatus.pushing,
+            ]))
+        ).all()
+
     if not rows:
         await _send_message(
             f"📊 <b>דוח בנייה יומי — {date.today().strftime('%d.%m.%Y')}</b>\n\nאין אתרים בנויים עדיין.",
@@ -78,7 +85,8 @@ async def send_daily_report(http_client: httpx.AsyncClient, settings: Settings) 
     approved_count = sum(1 for _, lead in rows if lead.marketing_approved)
     header = (
         f"📊 <b>דוח בנייה יומי — {date.today().strftime('%d.%m.%Y')}</b>\n"
-        f"🏗️ {len(rows)} אתרים בנויים | ✅ {approved_count} מאושרים | ⏳ {len(pending_count)} בתור"
+        f"🏗️ {len(rows)} בנויים | ✅ {approved_count} מאושרים | "
+        f"⏳ {len(pending_count)} בתור | 🔄 {len(active_count)} בתהליך"
     )
     await _send_message(header, settings=settings, client=http_client)
 

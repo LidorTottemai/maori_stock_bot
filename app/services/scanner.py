@@ -118,10 +118,17 @@ async def _execute(
     session.add(job)
     session.commit()
 
-    if qualifying_leads and not job.dry_run:
-        await telegram.send_report(
-            qualifying_leads, job.city, job.category, scanned_count, settings, http_client
-        )
+    if not job.dry_run:
+        if qualifying_leads:
+            await telegram.send_report(
+                qualifying_leads, job.city, job.category, scanned_count, settings, http_client
+            )
+        else:
+            await telegram.notify(
+                f"🔍 סריקה הושלמה — {job.city} / {job.category}\n"
+                f"נסרקו {scanned_count} עסקים, לא נמצאו לידים מעל הסף ({settings.min_booking_score}).",
+                settings, http_client,
+            )
 
 
 def _save_lead(

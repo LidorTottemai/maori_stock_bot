@@ -18,6 +18,27 @@ from app.services.vercel_client import create_and_deploy
 logger = logging.getLogger(__name__)
 
 
+async def _tg(
+    text: str,
+    settings: Settings,
+    client: httpx.AsyncClient,
+    keyboard: list | None = None,
+) -> None:
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return
+    payload: dict = {"chat_id": settings.telegram_chat_id, "text": text, "parse_mode": "HTML"}
+    if keyboard:
+        payload["reply_markup"] = {"inline_keyboard": keyboard}
+    try:
+        await client.post(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
+            json=payload,
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
 def _update_job(job_id: str, **kwargs) -> None:
     with Session(get_engine()) as session:
         job = session.get(RebuildJob, job_id)
@@ -41,7 +62,10 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
         lead_website = lead.website
         lead_category = lead.category or "עסק"
         lead_name = lead.name
+        lead_place_id = lead.place_id
         fix_prompt = job.fix_prompt
+
+    await _tg(f"🏗 מתחיל בניית אתר עבור <b>{lead_name}</b>...", settings, http_client)
 
     _update_job(
         job_id,
@@ -65,6 +89,7 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
             error=f"Scraping error: {exc}",
             finished_at=datetime.utcnow(),
         )
+        await _tg(f"❌ <b>כישלון בסריקת אתר</b> — {lead_name}\n{str(exc)[:200]}", settings, http_client)
         return
 
     _update_job(
@@ -106,6 +131,7 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
             error=f"Generation error: {exc}",
             finished_at=datetime.utcnow(),
         )
+        await _tg(f"❌ <b>כישלון בגנרציית אתר</b> — {lead_name}\n{str(exc)[:200]}", settings, http_client)
         return
 
     _update_job(job_id, status=RebuildStatus.pushing, current_phase="מעלה קבצים ל-GitHub...")
@@ -132,6 +158,18 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
             finished_at=datetime.utcnow(),
         )
         logger.info("Rebuild complete for '%s' → %s", lead_name, vercel_url or repo_url)
+        site_url = vercel_url or repo_url or ""
+        buttons = []
+        if site_url:
+            buttons.append([{"text": "🌐 צפה באתר", "url": site_url}])
+        buttons.append([
+            {"text": "✏️ תיקונים", "callback_data": f"fix:{job_id}:{lead_place_id}"},
+            {"text": "✅ אשר לשיווק", "callback_data": f"approve:{lead_place_id}"},
+        ])
+        await _tg(
+            f"✅ <b>{lead_name}</b> — האתר מוכן!\n🌐 {site_url}",
+            settings, http_client, keyboard=buttons,
+        )
     except Exception as exc:
         logger.exception("GitHub push failed for job %s", job_id)
         _update_job(
@@ -140,6 +178,7 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
             error=f"GitHub push error: {exc}",
             finished_at=datetime.utcnow(),
         )
+        await _tg(f"❌ <b>כישלון בבנייה</b> — {lead_name}\n{str(exc)[:200]}", settings, http_client)
 
 
 def _find_top_candidate_lead(session: Session) -> Lead | None:
@@ -182,6 +221,10 @@ async def process_rebuild_queue(http_client: httpx.AsyncClient, settings: Settin
                 session.add(job)
                 session.commit()
                 job_ids = [job.id]
+                await _tg(
+                    f"🤖 <b>תור ריק</b> — הוסף אוטומטית:\n<b>{lead.name}</b> (ניקוד {lead.score})",
+                    settings, http_client,
+                )
             else:
                 logger.info("Queue empty and no eligible leads found — skipping")
                 return
