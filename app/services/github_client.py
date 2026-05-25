@@ -1,7 +1,9 @@
 import base64
+import hashlib
 import logging
 import re
 import time
+import unicodedata
 
 import httpx
 
@@ -13,10 +15,16 @@ _GITHUB_API = "https://api.github.com"
 
 
 def _slugify(name: str) -> str:
-    slug = re.sub(r"[^\w\s-]", "", name.lower())
+    # Normalize and strip non-ASCII (removes Hebrew/Arabic/etc.)
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_only = normalized.encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^\w\s-]", "", ascii_only.lower())
     slug = re.sub(r"[\s_]+", "-", slug)
     slug = re.sub(r"-+", "-", slug).strip("-")
-    return slug[:50] or "business"
+    # Fallback: use short hash of original name if result is empty
+    if not slug:
+        slug = "biz-" + hashlib.md5(name.encode()).hexdigest()[:8]
+    return slug[:50]
 
 
 def _gh_headers(settings: Settings) -> dict[str, str]:
