@@ -190,7 +190,7 @@ async def generate_site(
             "claude",
             "-p",
             "--permission-mode", "dontAsk",
-            "--max-turns", "30",
+            "--max-turns", "80",
             "Read CLAUDE.md thoroughly, then build the complete Next.js project as specified. "
             "Write every file listed in CLAUDE.md to this directory.",
             cwd=str(project_dir),
@@ -204,12 +204,15 @@ async def generate_site(
             proc.kill()
             raise RuntimeError("Site generation timed out after 30 minutes")
 
-        if proc.returncode != 0:
+        out_text = stdout.decode(errors="replace")
+        if proc.returncode != 0 and "Reached max turns" not in out_text:
             err = stderr.decode(errors="replace")[:400]
-            out = stdout.decode(errors="replace")[:400]
-            raise RuntimeError(f"Claude Code exited {proc.returncode}: stderr={err!r} stdout={out!r}")
+            raise RuntimeError(f"Claude Code exited {proc.returncode}: stderr={err!r} stdout={out_text[:400]!r}")
 
-        logger.info("Claude Code finished. stdout preview: %s", stdout.decode(errors="replace")[:300])
+        if "Reached max turns" in out_text:
+            logger.warning("Claude Code hit max turns — collecting partial output")
+        else:
+            logger.info("Claude Code finished. stdout preview: %s", out_text[:300])
 
         # Collect all generated files
         files: dict[str, str] = {}
