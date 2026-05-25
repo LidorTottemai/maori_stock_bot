@@ -205,8 +205,9 @@ async def generate_site(
             raise RuntimeError("Site generation timed out after 30 minutes")
 
         if proc.returncode != 0:
-            err = stderr.decode(errors="replace")[:600]
-            raise RuntimeError(f"Claude Code exited {proc.returncode}: {err}")
+            err = stderr.decode(errors="replace")[:400]
+            out = stdout.decode(errors="replace")[:400]
+            raise RuntimeError(f"Claude Code exited {proc.returncode}: stderr={err!r} stdout={out!r}")
 
         logger.info("Claude Code finished. stdout preview: %s", stdout.decode(errors="replace")[:300])
 
