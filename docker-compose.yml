@@ -8,6 +8,8 @@ services:
     env_file: ./.env                        # inject all .env vars into container
     volumes:
       - ./.env:/app/.env:ro               # secrets (read-only, for dotenv fallback)
+      - ${HOME}/.claude:/root/.claude:rw        # Claude Code auth dir
+      - ${HOME}/.claude.json:/root/.claude.json:rw  # Claude Code main config
       - app_data:/data                    # SQLite persistence across restarts
     environment:
       DB_URL: sqlite:////data/scanner.db
