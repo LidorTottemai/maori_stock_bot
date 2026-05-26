@@ -28,19 +28,37 @@ def pick_todays_rotation() -> tuple[str, str]:
 async def find_working_rotation(
     http_client: httpx.AsyncClient, settings: Settings
 ) -> tuple[str, str]:
-    """Try up to 15 combinations until one returns results from Google Maps."""
+    """Pick a city+category not scanned in the last 30 days that has results on Maps."""
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=30)
+
+    with Session(get_engine()) as session:
+        recent = session.exec(
+            select(ScanJob.city, ScanJob.category)
+            .where(ScanJob.started_at >= cutoff)
+        ).all()
+    recent_set = {(c, cat) for c, cat in recent}
+
     idx = date.today().toordinal()
-    for offset in range(15):
+    for offset in range(len(CITIES) * len(ALL_CATEGORIES)):
         city = CITIES[(idx + offset) % len(CITIES)]
         category = ALL_CATEGORIES[(idx + offset) % len(ALL_CATEGORIES)]
+        if (city, category) in recent_set:
+            logger.debug("Skipping recently scanned: %s / %s", city, category)
+            continue
         businesses = await maps.search_businesses(
             category, city, settings, http_client, max_results=3
         )
-        if businesses:
-            logger.info("Found results at offset %d: %s / %s", offset, city, category)
+        if any(b.website for b in businesses):
+            logger.info("Found working combo at offset %d: %s / %s", offset, city, category)
             return city, category
-        logger.info("No results for %s / %s — trying next", city, category)
-    # Fallback to today's rotation even if empty
+        logger.info("No websites in %s / %s — trying next", city, category)
+    # Fallback: first combo not recently scanned, even without websites
+    for offset in range(len(CITIES) * len(ALL_CATEGORIES)):
+        city = CITIES[(idx + offset) % len(CITIES)]
+        category = ALL_CATEGORIES[(idx + offset) % len(ALL_CATEGORIES)]
+        if (city, category) not in recent_set:
+            return city, category
     return pick_todays_rotation()
 
 
