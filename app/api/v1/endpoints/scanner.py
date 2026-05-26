@@ -30,6 +30,7 @@ async def trigger_scan(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ScanJobRead:
     city, category = body.city, body.category
+    http_client = _get_http_client(request)
 
     if bool(city) != bool(category):
         raise HTTPException(status_code=422, detail="Provide both city and category, or neither")
@@ -47,7 +48,6 @@ async def trigger_scan(
     session.commit()
     session.refresh(job)
 
-    http_client = _get_http_client(request)
     background_tasks.add_task(run_scan_job, job.id, http_client, settings)
 
     return ScanJobRead.model_validate(job)
