@@ -44,6 +44,29 @@ def _format_report(
     return "\n".join(lines)
 
 
+async def send_card(
+    text: str,
+    keyboard: list,
+    settings: Settings,
+    client: httpx.AsyncClient,
+) -> None:
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return
+    try:
+        await client.post(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
+            json={
+                "chat_id": settings.telegram_chat_id,
+                "text": text,
+                "parse_mode": "HTML",
+                "reply_markup": {"inline_keyboard": keyboard},
+            },
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
 async def notify(text: str, settings: Settings, client: httpx.AsyncClient) -> None:
     if not settings.telegram_bot_token or not settings.telegram_chat_id:
         return

@@ -155,17 +155,49 @@ async def _execute(
     session.add(job)
     session.commit()
 
-    if not job.dry_run:
-        if qualifying_leads:
-            await telegram.send_report(
-                qualifying_leads, job.city, job.category, scanned_count, settings, http_client
-            )
-        else:
-            await telegram.notify(
-                f"🔍 סריקה הושלמה — {job.city} / {job.category}\n"
-                f"נסרקו {scanned_count} עסקים, לא נמצאו לידים מעל הסף ({settings.min_booking_score}).",
-                settings, http_client,
-            )
+    if job.dry_run:
+        return
+
+    # Always send top businesses with websites as individual cards with buttons
+    with Session(get_engine()) as s:
+        all_with_website = s.exec(
+            select(Lead)
+            .where(Lead.scan_job_id == job.id)
+            .where(Lead.website != "")
+            .where(Lead.website.is_not(None))
+            .order_by(Lead.score.desc())
+            .limit(10)
+        ).all()
+
+    if not all_with_website:
+        await telegram.notify(
+            f"🔍 סריקה הושלמה — {job.city} / {job.category}\n"
+            f"נסרקו {scanned_count} עסקים, אף אחד לא נמצא עם אתר.",
+            settings, http_client,
+        )
+        return
+
+    await telegram.notify(
+        f"🔍 <b>סריקה הושלמה — {job.city} / {job.category}</b>\n"
+        f"נסרקו {scanned_count} עסקים | {len(all_with_website)} עם אתר",
+        settings, http_client,
+    )
+    for lead in all_with_website:
+        has_booking = "✅ יש הזמנות" if lead.has_booking_system else "❌ אין הזמנות"
+        findings = "\n".join(lead.findings[:2]) if lead.findings else ""
+        text = (
+            f"<b>{lead.name}</b>\n"
+            f"ניקוד: {lead.score}/100 | {has_booking}\n"
+            f"🌐 {lead.website}\n"
+            f"📞 {lead.phone or '—'}\n"
+            + (f"{findings}" if findings else "")
+        )
+        await telegram.send_card(
+            text=text,
+            keyboard=[[{"text": "🏗 בנה אתר", "callback_data": f"queue:{lead.place_id}"}]],
+            settings=settings,
+            client=http_client,
+        )
 
 
 def _save_lead(
