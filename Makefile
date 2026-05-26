@@ -27,9 +27,14 @@ claude-auth:
 CITY     ?=
 CATEGORY ?=
 scan:
+	@if [ -n "$(CITY)" ] && [ -n "$(CATEGORY)" ]; then \
+		BODY='{"city":"$(CITY)","category":"$(CATEGORY)"}'; \
+	else \
+		BODY='{}'; \
+	fi; \
 	curl -s -X POST http://localhost:8000/api/v1/scanner/scan \
 	  -H "Content-Type: application/json" \
-	  -d "{\"city\":\"$(CITY)\",\"category\":\"$(CATEGORY)\"}" | python3 -m json.tool
+	  -d "$$BODY" | python3 -m json.tool
 
 # בניית אתר אחד מהתור
 rebuild:
