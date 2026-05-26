@@ -23,10 +23,13 @@ claude-auth:
 	claude auth login
 
 # סריקת עסקים + שליחה לטלגרם
+# שימוש: make scan  OR  make scan CITY="תל אביב" CATEGORY="חדר כושר"
+CITY     ?=
+CATEGORY ?=
 scan:
 	curl -s -X POST http://localhost:8000/api/v1/scanner/scan \
 	  -H "Content-Type: application/json" \
-	  -d '{}' | python3 -m json.tool
+	  -d "{\"city\":\"$(CITY)\",\"category\":\"$(CATEGORY)\"}" | python3 -m json.tool
 
 # בניית אתר אחד מהתור
 rebuild:

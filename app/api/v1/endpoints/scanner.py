@@ -1,7 +1,10 @@
+import logging
 from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+
+logger = logging.getLogger(__name__)
 from sqlmodel import Session, select
 
 from app.core.config import ALL_CATEGORIES, CITIES, Settings, get_settings
@@ -35,9 +38,9 @@ async def trigger_scan(
         city, category = pick_todays_rotation()
 
     if city not in CITIES:
-        raise HTTPException(status_code=422, detail=f"Unknown city: {city}")
+        logger.warning("City '%s' not in default list — proceeding anyway", city)
     if category not in ALL_CATEGORIES:
-        raise HTTPException(status_code=422, detail=f"Unknown category: {category}")
+        logger.warning("Category '%s' not in default list — proceeding anyway", category)
 
     job = ScanJob(city=city, category=category, dry_run=body.dry_run)
     session.add(job)
