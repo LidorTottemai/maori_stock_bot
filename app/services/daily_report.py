@@ -93,16 +93,18 @@ async def send_daily_report(http_client: httpx.AsyncClient, settings: Settings) 
     # One card per business with inline keyboard
     for job, lead in rows[:10]:
         site_url = job.vercel_url or job.repo_url or ""
+        # Telegram rejects non-ASCII URLs in inline keyboard buttons
+        valid_url = site_url if site_url and site_url.isascii() else ""
         approved_badge = "✅ " if lead.marketing_approved else ""
         text = (
             f"{approved_badge}<b>{lead.name}</b>\n"
             f"ניקוד: {lead.score} | {lead.category}\n"
-            f"🌐 {site_url}"
+            + (f"🌐 {valid_url}" if valid_url else "⚠️ URL לא תקין — נדרש rebuild")
         )
 
         buttons = []
-        if site_url:
-            buttons.append({"text": "🌐 צפה באתר", "url": site_url})
+        if valid_url:
+            buttons.append({"text": "🌐 צפה באתר", "url": valid_url})
         buttons.append({"text": "✏️ תיקונים", "callback_data": f"fix:{job.id}:{lead.place_id}"})
         if not lead.marketing_approved:
             buttons.append({"text": "✅ אשר לשיווק", "callback_data": f"approve:{lead.place_id}"})
