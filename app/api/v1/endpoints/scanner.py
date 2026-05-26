@@ -12,7 +12,7 @@ from app.core.database import get_engine, get_session
 from app.models.lead import Lead
 from app.models.scan_job import ScanJob, ScanStatus
 from app.schemas.scan import RotationRead, ScanJobRead, ScanRequest
-from app.services.scanner import pick_todays_rotation, run_scan_job
+from app.services.scanner import find_working_rotation, pick_todays_rotation, run_scan_job
 
 router = APIRouter(prefix="/scanner", tags=["scanner"])
 
@@ -35,7 +35,7 @@ async def trigger_scan(
         raise HTTPException(status_code=422, detail="Provide both city and category, or neither")
 
     if not city:
-        city, category = pick_todays_rotation()
+        city, category = await find_working_rotation(http_client, settings)
 
     if city not in CITIES:
         logger.warning("City '%s' not in default list — proceeding anyway", city)

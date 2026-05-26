@@ -25,6 +25,25 @@ def pick_todays_rotation() -> tuple[str, str]:
     return CITIES[idx % len(CITIES)], ALL_CATEGORIES[idx % len(ALL_CATEGORIES)]
 
 
+async def find_working_rotation(
+    http_client: httpx.AsyncClient, settings: Settings
+) -> tuple[str, str]:
+    """Try up to 15 combinations until one returns results from Google Maps."""
+    idx = date.today().toordinal()
+    for offset in range(15):
+        city = CITIES[(idx + offset) % len(CITIES)]
+        category = ALL_CATEGORIES[(idx + offset) % len(ALL_CATEGORIES)]
+        businesses = await maps.search_businesses(
+            category, city, settings, http_client, max_results=3
+        )
+        if businesses:
+            logger.info("Found results at offset %d: %s / %s", offset, city, category)
+            return city, category
+        logger.info("No results for %s / %s — trying next", city, category)
+    # Fallback to today's rotation even if empty
+    return pick_todays_rotation()
+
+
 def is_already_scanned(place_id: str, session: Session) -> bool:
     return session.get(Lead, place_id) is not None
 
@@ -58,22 +77,7 @@ async def run_scan_job(
 
 async def run_daily_scan(http_client: httpx.AsyncClient, settings: Settings) -> None:
     """Called by the APScheduler cron job. Auto-retries combinations until results found."""
-    idx = date.today().toordinal()
-    city, category = CITIES[idx % len(CITIES)], ALL_CATEGORIES[idx % len(ALL_CATEGORIES)]
-
-    # Try up to 15 combinations until one returns results
-    for offset in range(15):
-        probe_city = CITIES[(idx + offset) % len(CITIES)]
-        probe_category = ALL_CATEGORIES[(idx + offset) % len(ALL_CATEGORIES)]
-        businesses = await maps.search_businesses(
-            probe_category, probe_city, settings, http_client, max_results=3
-        )
-        if businesses:
-            city, category = probe_city, probe_category
-            logger.info("Found results at offset %d: %s / %s", offset, city, category)
-            break
-        logger.info("No results for %s / %s — trying next combination", probe_city, probe_category)
-
+    city, category = await find_working_rotation(http_client, settings)
     with Session(get_engine()) as session:
         job = ScanJob(city=city, category=category, dry_run=False)
         session.add(job)
