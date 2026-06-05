@@ -10,27 +10,28 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const expectedUsername = process.env.DASHBOARD_USERNAME ?? "admin"
-        const expectedPassword = process.env.DASHBOARD_PASSWORD ?? "changeme"
-
-        if (
-          credentials?.username === expectedUsername &&
-          credentials?.password === expectedPassword
-        ) {
-          return {
-            id: "1",
-            name: "Admin",
-            email: "admin@hipsterhippo.com",
-          }
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+        try {
+          const res = await fetch(`${apiUrl}/api/v1/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: credentials?.username ?? "",
+              password: credentials?.password ?? "",
+            }),
+          })
+          if (!res.ok) return null
+          const user = await res.json()
+          return { id: String(user.id), name: user.name }
+        } catch {
+          return null
         }
-
-        return null
       },
     }),
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
     signIn: "/login",
