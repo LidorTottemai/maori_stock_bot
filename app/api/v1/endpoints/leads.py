@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, func, select
 
@@ -41,6 +43,19 @@ def get_lead(place_id: str, session: Session = Depends(get_session)) -> LeadRead
     lead = session.get(Lead, place_id)
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+    return LeadRead.model_validate(lead)
+
+
+@router.post("/{place_id}/approve", response_model=LeadRead, summary="Approve lead for marketing")
+def approve_lead(place_id: str, session: Session = Depends(get_session)) -> LeadRead:
+    lead = session.get(Lead, place_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    lead.marketing_approved = True
+    lead.marketing_approved_at = datetime.utcnow()
+    session.add(lead)
+    session.commit()
+    session.refresh(lead)
     return LeadRead.model_validate(lead)
 
 

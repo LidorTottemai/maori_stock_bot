@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.core.config import Settings, get_settings
@@ -21,12 +22,17 @@ _ACTIVE_STATUSES = [
 ]
 
 
+class QueueRequest(BaseModel):
+    fix_prompt: str | None = None
+
+
 @router.post("/queue/{place_id}", response_model=RebuildJobRead, status_code=201)
 async def queue_rebuild(
     place_id: str,
+    body: QueueRequest = Body(default_factory=QueueRequest),
     session: Session = Depends(get_session),
 ):
-    """Add a lead to the rebuild queue."""
+    """Add a lead to the rebuild queue, with optional fix prompt."""
     lead = session.get(Lead, place_id)
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -45,6 +51,8 @@ async def queue_rebuild(
         id=str(uuid.uuid4()),
         lead_place_id=place_id,
         queued_at=datetime.utcnow(),
+        fix_prompt=body.fix_prompt,
+        priority=10 if body.fix_prompt else 0,
     )
     session.add(job)
     session.commit()
