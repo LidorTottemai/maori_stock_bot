@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     outreach_from_email: str = "hello@example.com"
     outreach_price_ils: int = 1250
+    daily_combos: int = 3
 
 
 @lru_cache
@@ -42,9 +43,17 @@ def get_settings() -> Settings:
 
 # Static rotation data — not user-configurable
 CITIES: list[str] = [
+    # major cities
     "תל אביב", "ירושלים", "חיפה", "באר שבע",
     "ראשון לציון", "פתח תקווה", "נתניה", "אשדוד",
     "רמת גן", "הרצליה", "רעננה", "כפר סבא", "מודיעין",
+    # medium towns
+    "אשקלון", "חולון", "בני ברק", "בת ים",
+    "רחובות", "לוד", "רמלה", "הוד השרון",
+    "כפר יונה", "טבריה", "נצרת עילית", "עפולה",
+    "קריית גת", "קריית ביאליק", "קריית ים", "קריית מוצקין",
+    "אור יהודה", "יהוד", "גבעתיים", "אלעד",
+    "ביתר עילית", "מעלה אדומים",
 ]
 
 SERVICE_CATEGORIES: list[str] = [

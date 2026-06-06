@@ -26,10 +26,13 @@ def pick_todays_rotation() -> tuple[str, str]:
 
 
 async def find_working_rotation(
-    http_client: httpx.AsyncClient, settings: Settings
+    http_client: httpx.AsyncClient,
+    settings: Settings,
+    exclude: list[tuple[str, str]] | None = None,
 ) -> tuple[str, str]:
     """Pick a city+category not scanned in the last 30 days that has results on Maps."""
     from datetime import timedelta
+    exclude = exclude or []
     cutoff = datetime.utcnow() - timedelta(days=30)
 
     with Session(get_engine()) as session:
@@ -43,8 +46,8 @@ async def find_working_rotation(
     for offset in range(len(CITIES) * len(ALL_CATEGORIES)):
         city = CITIES[(idx + offset) % len(CITIES)]
         category = ALL_CATEGORIES[(idx + offset) % len(ALL_CATEGORIES)]
-        if (city, category) in recent_set:
-            logger.debug("Skipping recently scanned: %s / %s", city, category)
+        if (city, category) in recent_set or (city, category) in exclude:
+            logger.debug("Skipping: %s / %s", city, category)
             continue
         businesses = await maps.search_businesses(
             category, city, settings, http_client, max_results=3
@@ -53,17 +56,31 @@ async def find_working_rotation(
             logger.info("Found working combo at offset %d: %s / %s", offset, city, category)
             return city, category
         logger.info("No websites in %s / %s — trying next", city, category)
-    # Fallback: first combo not recently scanned, even without websites
+
+    # Fallback: first combo not recently scanned and not excluded
     for offset in range(len(CITIES) * len(ALL_CATEGORIES)):
         city = CITIES[(idx + offset) % len(CITIES)]
         category = ALL_CATEGORIES[(idx + offset) % len(ALL_CATEGORIES)]
-        if (city, category) not in recent_set:
+        if (city, category) not in recent_set and (city, category) not in exclude:
             return city, category
     return pick_todays_rotation()
 
 
 def is_already_scanned(place_id: str, session: Session) -> bool:
     return session.get(Lead, place_id) is not None
+
+
+def _maps_score_adjustment(rating: float | None, reviews: int | None) -> tuple[int, list[str]]:
+    """Bonus/penalty based on Google Maps social proof."""
+    if rating is None or reviews is None:
+        return 0, []
+    if reviews < 5:
+        return -15, [f"⚠️ מעט ביקורות ({reviews}) — עסק לא פעיל (-15)"]
+    if reviews >= 20 and rating >= 4.0:
+        return 20, [f"⭐ {rating}/5 | {reviews} ביקורות — עסק פעיל (+20)"]
+    if reviews >= 10:
+        return 10, [f"⭐ {rating}/5 | {reviews} ביקורות (+10)"]
+    return 0, []
 
 
 async def run_scan_job(
@@ -94,15 +111,21 @@ async def run_scan_job(
 
 
 async def run_daily_scan(http_client: httpx.AsyncClient, settings: Settings) -> None:
-    """Called by the APScheduler cron job. Auto-retries combinations until results found."""
-    city, category = await find_working_rotation(http_client, settings)
-    with Session(get_engine()) as session:
-        job = ScanJob(city=city, category=category, dry_run=False)
-        session.add(job)
-        session.commit()
-        session.refresh(job)
+    """Called by the APScheduler cron job. Runs daily_combos city+category pairs."""
+    picked: list[tuple[str, str]] = []
+    for _ in range(settings.daily_combos):
+        city, category = await find_working_rotation(http_client, settings, exclude=picked)
+        picked.append((city, category))
+        logger.info("Daily scan combo: %s / %s", city, category)
 
-    await run_scan_job(job.id, http_client, settings)
+    for city, category in picked:
+        with Session(get_engine()) as session:
+            job = ScanJob(city=city, category=category, dry_run=False)
+            session.add(job)
+            session.commit()
+            session.refresh(job)
+
+        await run_scan_job(job.id, http_client, settings)
 
 
 async def _execute(
@@ -112,7 +135,7 @@ async def _execute(
     settings: Settings,
 ) -> None:
     businesses = await maps.search_businesses(
-        job.category, job.city, settings, http_client, max_results=20
+        job.category, job.city, settings, http_client, max_results=60
     )
     job.businesses_found = len(businesses)
     session.add(job)
@@ -134,15 +157,19 @@ async def _execute(
         scanned_count += 1
         result = await analyzer.analyze(biz.website, http_client)
 
+        adj, adj_notes = _maps_score_adjustment(biz.rating, biz.reviews)
+        total_score = result.score + adj
+        combined_findings = result.findings + adj_notes
+
         lead = _save_lead(
             session, biz, job,
-            score=result.score,
-            findings=result.findings,
+            score=total_score,
+            findings=combined_findings,
             has_booking_system=result.has_booking_system,
             wordpress_version=result.wordpress_version,
         )
 
-        if result.reachable and not result.has_booking_system and result.score >= settings.min_booking_score:
+        if result.reachable and not result.has_booking_system and total_score >= settings.min_booking_score:
             qualifying_leads.append(lead)
 
     qualifying_leads.sort(key=lambda x: x.score, reverse=True)
@@ -158,7 +185,6 @@ async def _execute(
     if job.dry_run:
         return
 
-    # Always send top businesses with websites as individual cards with buttons
     with Session(get_engine()) as s:
         all_with_website = s.exec(
             select(Lead)
@@ -185,12 +211,14 @@ async def _execute(
     for lead in all_with_website:
         has_booking = "✅ יש הזמנות" if lead.has_booking_system else "❌ אין הזמנות"
         findings = "\n".join(lead.findings[:2]) if lead.findings else ""
+        stars = f"⭐ {lead.rating}/5 ({lead.reviews} ביקורות)" if lead.rating else ""
         text = (
             f"<b>{lead.name}</b>\n"
-            f"ניקוד: {lead.score}/100 | {has_booking}\n"
-            f"🌐 {lead.website}\n"
+            f"ניקוד: {lead.score} | {has_booking}\n"
+            + (f"{stars}\n" if stars else "")
+            + f"🌐 {lead.website}\n"
             f"📞 {lead.phone or '—'}\n"
-            + (f"{findings}" if findings else "")
+            + (findings if findings else "")
         )
         await telegram.send_card(
             text=text,
