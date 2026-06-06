@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    image: maori-stock-bot
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: ./.env                        # inject all .env vars into container
+    volumes:
+      - ./.env:/app/.env:ro               # secrets (read-only, for dotenv fallback)
+      - ${HOME}/.claude:/root/.claude:rw        # Claude Code auth dir
+      - ${HOME}/.claude.json:/root/.claude.json:rw  # Claude Code main config
+      - app_data:/data                    # SQLite persistence across restarts
+    environment:
+      DB_URL: sqlite:////data/scanner.db
+      TZ: Asia/Jerusalem
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  app_data:
