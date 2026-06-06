@@ -1,5 +1,5 @@
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException
-from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -8,7 +8,13 @@ from app.models.dashboard_user import DashboardUser
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def _hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def _verify(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
 
 
 class RegisterRequest(BaseModel):
@@ -33,7 +39,7 @@ def register(body: RegisterRequest, session: Session = Depends(get_session)) -> 
         raise HTTPException(status_code=409, detail="Admin account already exists")
     user = DashboardUser(
         username=body.username,
-        hashed_password=_pwd.hash(body.password),
+        hashed_password=_hash(body.password),
     )
     session.add(user)
     session.commit()
@@ -46,6 +52,6 @@ def login(body: LoginRequest, session: Session = Depends(get_session)) -> UserRe
     user = session.exec(
         select(DashboardUser).where(DashboardUser.username == body.username)
     ).first()
-    if not user or not _pwd.verify(body.password, user.hashed_password):
+    if not user or not _verify(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return UserResponse(id=user.id, name=user.username)
