@@ -167,6 +167,7 @@ async def _execute(
             findings=combined_findings,
             has_booking_system=result.has_booking_system,
             wordpress_version=result.wordpress_version,
+            design_modern=result.design_modern,
         )
 
         if result.reachable and not result.has_booking_system and total_score >= settings.min_booking_score:
@@ -191,7 +192,7 @@ async def _execute(
             .where(Lead.scan_job_id == job.id)
             .where(Lead.website != "")
             .where(Lead.website.is_not(None))
-            .order_by(Lead.score.desc())
+            .order_by(Lead.design_modern.asc(), Lead.score.desc())
             .limit(10)
         ).all()
 
@@ -210,11 +211,12 @@ async def _execute(
     )
     for lead in all_with_website:
         has_booking = "✅ יש הזמנות" if lead.has_booking_system else "❌ אין הזמנות"
+        design_badge = "🎨 עיצוב מודרני" if lead.design_modern else "🗓 עיצוב ישן"
         findings = "\n".join(lead.findings[:2]) if lead.findings else ""
         stars = f"⭐ {lead.rating}/5 ({lead.reviews} ביקורות)" if lead.rating else ""
         text = (
             f"<b>{lead.name}</b>\n"
-            f"ניקוד: {lead.score} | {has_booking}\n"
+            f"ניקוד: {lead.score} | {has_booking} | {design_badge}\n"
             + (f"{stars}\n" if stars else "")
             + f"🌐 {lead.website}\n"
             f"📞 {lead.phone or '—'}\n"
@@ -237,6 +239,7 @@ def _save_lead(
     findings: list[str],
     has_booking_system: bool,
     wordpress_version: str | None = None,
+    design_modern: bool = False,
 ) -> Lead:
     lead = Lead(
         place_id=biz.place_id,
@@ -250,6 +253,7 @@ def _save_lead(
         findings_json=json.dumps(findings, ensure_ascii=False),
         has_booking_system=has_booking_system,
         wordpress_version=wordpress_version,
+        design_modern=design_modern,
         city=job.city,
         category=job.category,
         scan_job_id=job.id,

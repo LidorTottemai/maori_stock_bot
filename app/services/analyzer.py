@@ -1,5 +1,5 @@
 """
-Analyzes a business website to detect manual booking patterns.
+Analyzes a business website to detect manual booking patterns and design modernity.
 Returns a typed result with a score and human-readable findings.
 Higher score = stronger lead (relies on manual booking / outdated infrastructure).
 """
@@ -57,6 +57,52 @@ _WP_GENERATOR = re.compile(
 _WP_CONTENT = re.compile(r"/wp-content/", re.IGNORECASE)
 _COPYRIGHT = re.compile(r"copyright\s*[©&copy;]*\s*(\d{4})", re.IGNORECASE)
 
+# Modern framework / tech signals
+_MODERN_SIGNALS: list[tuple[str, int, str]] = [
+    (r"_next/|__NEXT_DATA__|ReactDOM\.render|react-dom", 40, "⚡ React/Next.js"),
+    (r"__vue__|v-bind:|nuxt|vue\.min\.js", 40, "⚡ Vue/Nuxt"),
+    (r'class="[^"]*\b(?:px-\d|py-\d|mx-\d|my-\d|flex\b|grid\b|text-\w+-\d{3}|bg-\w+-\d{3})', 30, "⚡ Tailwind CSS"),
+    (r"col-(?:md|lg|xl|xxl)-\d|d-flex\b|d-grid\b|bootstrap(?:\.bundle)?\.min\.js", 20, "⚡ Bootstrap 4/5"),
+    (r"\bsrcset=|<picture\b", 15, "⚡ Responsive images"),
+    (r"var\(--[\w-]", 15, "⚡ CSS custom properties"),
+    (r"fonts\.googleapis\.com/css2", 10, "⚡ Google Fonts v2"),
+    (r"svelte|astro|solid-js|qwik", 40, "⚡ Modern JS framework"),
+]
+
+# Outdated tech signals
+_OUTDATED_SIGNALS: list[tuple[str, int, str]] = [
+    (r"<font\b", 20, "🗓 Font tags (HTML 3)"),
+    (r"jquery[.-]1\.[0-9]\.", 20, "🗓 jQuery 1.x"),
+    (r"col-xs-\d|bootstrap[.-](?:2|3)\.", 15, "🗓 Bootstrap 2/3"),
+    (r"\.swf[\"'>\s]", 25, "🗓 Flash content"),
+    (r"<frameset|<frame\b", 30, "🗓 Frames (HTML 3)"),
+]
+
+
+def _check_design_modernity(html: str) -> tuple[bool, list[str]]:
+    """Returns (is_modern, signals). is_modern=True means site looks contemporary."""
+    modern_score = 0
+    outdated_score = 0
+    signals: list[str] = []
+
+    for pattern, pts, label in _MODERN_SIGNALS:
+        if re.search(pattern, html, re.IGNORECASE):
+            modern_score += pts
+            signals.append(label)
+
+    # Table-based layout: many nested tables with layout attributes
+    if html.count("<table") > 3 and re.search(r"<td[^>]+(?:bgcolor|width=[\"']\d)", html, re.IGNORECASE):
+        outdated_score += 30
+        signals.append("🗓 Table-based layout")
+
+    for pattern, pts, label in _OUTDATED_SIGNALS:
+        if re.search(pattern, html, re.IGNORECASE):
+            outdated_score += pts
+            signals.append(label)
+
+    is_modern = modern_score >= 40 and modern_score > outdated_score * 1.5
+    return is_modern, signals
+
 
 class AnalysisResult(BaseModel):
     url: str
@@ -65,6 +111,8 @@ class AnalysisResult(BaseModel):
     has_booking_system: bool
     wordpress_version: str | None
     reachable: bool
+    design_modern: bool
+    design_signals: list[str]
 
 
 async def analyze(url: str, client: httpx.AsyncClient) -> AnalysisResult:
@@ -74,6 +122,7 @@ async def analyze(url: str, client: httpx.AsyncClient) -> AnalysisResult:
     result = AnalysisResult(
         url=url, score=0, findings=[], has_booking_system=False,
         wordpress_version=None, reachable=False,
+        design_modern=False, design_signals=[],
     )
 
     try:
@@ -88,6 +137,9 @@ async def analyze(url: str, client: httpx.AsyncClient) -> AnalysisResult:
     html_lower = html.lower()
     soup = BeautifulSoup(html, "lxml")
     text = soup.get_text(" ", strip=True)
+
+    # Design modernity check
+    result.design_modern, result.design_signals = _check_design_modernity(html)
 
     # Booking widget — disqualifies the lead
     for sig in _BOOKING_WIDGETS:

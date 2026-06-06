@@ -26,6 +26,7 @@ class Lead(SQLModel, table=True):
     marketing_approved: bool = Field(default=False)
     marketing_approved_at: datetime | None = None
     email: str = ""
+    design_modern: bool = Field(default=False)
 
     @property
     def findings(self) -> list[str]:
