@@ -59,10 +59,7 @@ export default function LeadsPage() {
   const { data, isLoading } = useSWR(
     ["leads", page, showOnlyOpportunities],
     () =>
-      api.leads({
-        page,
-        has_booking: showOnlyOpportunities ? false : undefined,
-      }),
+      api.leads({ page }),
     { refreshInterval: 60000 }
   )
 
