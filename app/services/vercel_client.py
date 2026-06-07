@@ -55,10 +55,15 @@ async def create_and_deploy(
         timeout=30,
     )
     if deploy_resp.status_code not in (200, 201):
-        logger.warning("Vercel deploy returned %s: %s", deploy_resp.status_code, deploy_resp.text[:200])
+        raise RuntimeError(
+            f"Vercel deploy failed ({deploy_resp.status_code}): {deploy_resp.text[:300]}"
+        )
 
-    vercel_url = f"https://{repo_name}.vercel.app"
-    logger.info("Vercel project created → %s", vercel_url)
+    # Use URL from response if available; fall back to canonical project alias
+    data = deploy_resp.json()
+    raw_url = data.get("url") or f"{repo_name}.vercel.app"
+    vercel_url = raw_url if raw_url.startswith("http") else f"https://{raw_url}"
+    logger.info("Vercel deployment triggered → %s", vercel_url)
     return vercel_url
 
 
