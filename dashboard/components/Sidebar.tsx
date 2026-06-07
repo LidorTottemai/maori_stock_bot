@@ -31,7 +31,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="flex flex-col h-screen bg-h-card border-l border-h-border"
+      className="hidden md:flex flex-col h-screen bg-h-card border-l border-h-border"
       style={{ width: 240, minWidth: 240 }}
     >
       {/* Logo */}

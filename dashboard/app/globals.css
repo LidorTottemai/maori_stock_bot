@@ -54,3 +54,8 @@ body {
 .pulse-fuchsia {
   animation: pulse-fuchsia 2s infinite;
 }
+
+/* ── Mobile safe area ──────────────────────────────────────────── */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
