@@ -1,5 +1,3 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
-
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface Stats {
@@ -77,7 +75,9 @@ export interface OutreachItem {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
+  // path is like /api/v1/dashboard/stats → proxy to /api/proxy/dashboard/stats
+  const proxyPath = path.replace("/api/v1/", "/api/proxy/")
+  const res = await fetch(proxyPath)
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${res.statusText}`)
   }
@@ -109,20 +109,20 @@ export const api = {
     fetchJson<OutreachItem[]>("/api/v1/dashboard/outreach"),
 
   queueRebuild: (placeId: string, fixPrompt?: string): Promise<Response> =>
-    fetch(`${API_BASE}/api/v1/rebuild/queue/${placeId}`, {
+    fetch(`/api/proxy/rebuild/queue/${placeId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fix_prompt: fixPrompt ?? null }),
     }),
 
   approveMarketing: (placeId: string): Promise<Response> =>
-    fetch(`${API_BASE}/api/v1/leads/${placeId}/approve`, {
+    fetch(`/api/proxy/leads/${placeId}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     }),
 
   deleteJob: (jobId: string): Promise<Response> =>
-    fetch(`${API_BASE}/api/v1/rebuild/${jobId}`, {
+    fetch(`/api/proxy/rebuild/${jobId}`, {
       method: "DELETE",
     }),
 }
