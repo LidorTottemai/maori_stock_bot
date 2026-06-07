@@ -87,49 +87,45 @@ async function fetchJson<T>(path: string): Promise<T> {
 // ── API client ─────────────────────────────────────────────────────────────────
 
 export const api = {
-  stats: (): Promise<Stats> => fetchJson<Stats>("/api/stats"),
+  stats: (): Promise<Stats> =>
+    fetchJson<Stats>("/api/v1/dashboard/stats"),
 
   sites: (page = 1): Promise<SitesPage> =>
-    fetchJson<SitesPage>(`/api/sites?page=${page}&size=30`),
+    fetchJson<SitesPage>(`/api/v1/dashboard/sites?page=${page}&size=30`),
 
-  queue: (): Promise<QueueItem[]> => fetchJson<QueueItem[]>("/api/queue"),
+  queue: (): Promise<QueueItem[]> =>
+    fetchJson<QueueItem[]>("/api/v1/dashboard/queue"),
 
   leads: (params?: {
     page?: number
     min_score?: number
-    has_booking?: boolean
   }): Promise<LeadsPage> => {
     const qs = new URLSearchParams()
     if (params?.page) qs.set("page", String(params.page))
     if (params?.min_score !== undefined)
       qs.set("min_score", String(params.min_score))
-    if (params?.has_booking !== undefined)
-      qs.set("has_booking", String(params.has_booking))
     const query = qs.toString() ? `?${qs.toString()}` : ""
-    return fetchJson<LeadsPage>(`/api/leads${query}`)
+    return fetchJson<LeadsPage>(`/api/v1/leads${query}`)
   },
 
   outreach: (): Promise<OutreachItem[]> =>
-    fetchJson<OutreachItem[]>("/api/outreach"),
+    fetchJson<OutreachItem[]>("/api/v1/dashboard/outreach"),
 
   queueRebuild: (placeId: string, fixPrompt?: string): Promise<Response> =>
-    fetch(`${API_BASE}/api/queue`, {
+    fetch(`${API_BASE}/api/v1/rebuild/queue/${placeId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        place_id: placeId,
-        fix_prompt: fixPrompt ?? null,
-      }),
+      body: JSON.stringify({ fix_prompt: fixPrompt ?? null }),
     }),
 
   approveMarketing: (placeId: string): Promise<Response> =>
-    fetch(`${API_BASE}/api/sites/${placeId}/approve`, {
+    fetch(`${API_BASE}/api/v1/leads/${placeId}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     }),
 
   deleteJob: (jobId: string): Promise<Response> =>
-    fetch(`${API_BASE}/api/queue/${jobId}`, {
+    fetch(`${API_BASE}/api/v1/rebuild/${jobId}`, {
       method: "DELETE",
     }),
 }
