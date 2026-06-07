@@ -96,10 +96,7 @@ export const api = {
   queue: (): Promise<QueueItem[]> =>
     fetchJson<QueueItem[]>("/api/v1/dashboard/queue"),
 
-  leads: (params?: {
-    page?: number
-    min_score?: number
-  }): Promise<LeadsPage> => {
+  leads: (params?: { page?: number; min_score?: number }): Promise<LeadsPage> => {
     const qs = new URLSearchParams()
     if (params?.page) qs.set("page", String(params.page))
     if (params?.min_score !== undefined)
