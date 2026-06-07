@@ -10,7 +10,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+        const apiUrl = process.env.API_URL ?? "http://localhost:8000"
         try {
           const res = await fetch(`${apiUrl}/api/v1/auth/login`, {
             method: "POST",
