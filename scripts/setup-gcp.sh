@@ -20,8 +20,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 echo ""
 echo "=== Next steps ==="
-echo "1. Edit /etc/nginx/sites-available/api — replace YOUR_DOMAIN with your real domain"
-echo "2. sudo certbot --nginx -d api.YOUR_DOMAIN.com"
+echo "1. sudo certbot --nginx -d api.hhippo.co.il"
 echo "3. cp ~/maori_stock_bot/.env.example ~/maori_stock_bot/.env  (and fill in secrets)"
 echo "4. cd ~/maori_stock_bot && docker compose up -d"
 echo "5. Add GCP_HOST, GCP_USER, GCP_SSH_KEY to GitHub repo Secrets"
