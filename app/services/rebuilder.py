@@ -13,7 +13,7 @@ from app.services.competitor_researcher import CompetitorInsights, research_comp
 from app.services.github_client import create_repo_and_push
 from app.services.playwright_inspector import crawl_site
 from app.services.site_generator import generate_site
-from app.services.vercel_client import create_and_deploy
+from app.services.gcp_deployer import deploy_site
 
 logger = logging.getLogger(__name__)
 
@@ -141,12 +141,12 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
         repo_url, repo_name = await create_repo_and_push(business_name, files, settings, http_client)
 
         vercel_url: str | None = None
-        if settings.vercel_token and settings.github_username:
+        if settings.github_username:
             try:
-                _update_job(job_id, current_phase="מגדיר Vercel deployment...")
-                vercel_url = await create_and_deploy(repo_name, settings.github_username, settings, http_client)
-            except Exception as vercel_exc:
-                logger.warning("Vercel deploy failed (non-fatal): %s", vercel_exc)
+                _update_job(job_id, current_phase="מגדיר GCP deployment...")
+                vercel_url = await deploy_site(repo_name, settings)
+            except Exception as deploy_exc:
+                logger.warning("GCP deploy failed (non-fatal): %s", deploy_exc)
 
         _update_job(
             job_id,
