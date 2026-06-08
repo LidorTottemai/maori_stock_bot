@@ -1,49 +1,40 @@
-import asyncio
 import logging
 import re
+
+import httpx
 
 from app.core.config import Settings
 
 logger = logging.getLogger(__name__)
 
 _DOMAIN = "hhippo.co.il"
-_DEPLOY_SCRIPT = "/home/ubuntu/maori_stock_bot/scripts/deploy-site.sh"
-_SITES_DIR = "/var/www/sites"
 
 
 def _repo_to_subdomain(repo_name: str) -> str:
     return re.sub(r"-website$", "", repo_name)
 
 
-def _repo_to_port(repo_name: str) -> int:
-    """Deterministic port 3001-3900 from repo name."""
-    return 3001 + (abs(hash(repo_name)) % 900)
-
-
-async def deploy_site(repo_name: str, settings: Settings) -> str:
-    """Build and serve a generated site. Returns its public URL."""
-    port = _repo_to_port(repo_name)
-    subdomain = _repo_to_subdomain(repo_name)
-
-    proc = await asyncio.create_subprocess_exec(
-        "bash",
-        _DEPLOY_SCRIPT,
-        repo_name,
-        settings.github_username,
-        str(port),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,
+async def deploy_site(repo_name: str, settings: Settings, http_client: httpx.AsyncClient) -> str:
+    """Trigger GitHub Actions deploy-site workflow. Returns the public URL."""
+    resp = await http_client.post(
+        f"https://api.github.com/repos/{settings.github_username}/maori_stock_bot/dispatches",
+        headers={
+            "Authorization": f"Bearer {settings.github_token}",
+            "Accept": "application/vnd.github+json",
+        },
+        json={
+            "event_type": "deploy-site",
+            "client_payload": {
+                "repo_name": repo_name,
+                "github_owner": settings.github_username,
+            },
+        },
+        timeout=15,
     )
-    try:
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=600)
-    except asyncio.TimeoutError:
-        proc.kill()
-        raise RuntimeError("Site deployment timed out after 10 minutes")
+    if resp.status_code != 204:
+        raise RuntimeError(f"GitHub dispatch failed ({resp.status_code}): {resp.text[:200]}")
 
-    output = stdout.decode(errors="replace")
-    logger.info("deploy-site output:\n%s", output[-1000:])
-
-    if proc.returncode != 0:
-        raise RuntimeError(f"deploy-site.sh exited {proc.returncode}:\n{output[-500:]}")
-
-    return f"https://{subdomain}.{_DOMAIN}"
+    subdomain = _repo_to_subdomain(repo_name)
+    url = f"https://{subdomain}.{_DOMAIN}"
+    logger.info("Deploy dispatch sent → %s", url)
+    return url

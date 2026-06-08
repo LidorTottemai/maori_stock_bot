@@ -1,11 +1,20 @@
 #!/bin/bash
-# Usage: deploy-site.sh <repo_name> <github_owner> <port>
-# Example: deploy-site.sh fixfeet-website lidortottemai 3001
+# Usage: deploy-site.sh <repo_name> <github_owner>
+# Example: deploy-site.sh fixfeet-website lidortottemai
 set -e
 
 REPO_NAME="$1"
 GITHUB_OWNER="$2"
-PORT="$3"
+
+# Deterministic port from repo name (3001-3900)
+PORT_FILE="$HOME/.site_ports"
+touch "$PORT_FILE"
+PORT=$(grep "^$REPO_NAME=" "$PORT_FILE" | cut -d= -f2)
+if [ -z "$PORT" ]; then
+    LAST_PORT=$(sort -t= -k2 -n "$PORT_FILE" 2>/dev/null | tail -1 | cut -d= -f2)
+    PORT=$(( ${LAST_PORT:-3000} + 1 ))
+    echo "$REPO_NAME=$PORT" >> "$PORT_FILE"
+fi
 DOMAIN="hhippo.co.il"
 SITES_DIR="/var/www/sites"
 SITE_DIR="$SITES_DIR/$REPO_NAME"

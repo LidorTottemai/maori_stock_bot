@@ -144,7 +144,7 @@ async def run_rebuild_job(job_id: str, http_client: httpx.AsyncClient, settings:
         if settings.github_username:
             try:
                 _update_job(job_id, current_phase="מגדיר GCP deployment...")
-                vercel_url = await deploy_site(repo_name, settings)
+                vercel_url = await deploy_site(repo_name, settings, http_client)
             except Exception as deploy_exc:
                 logger.warning("GCP deploy failed (non-fatal): %s", deploy_exc)
 

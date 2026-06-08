@@ -1,0 +1,20 @@
+name: Deploy Site to GCP
+
+on:
+  repository_dispatch:
+    types: [deploy-site]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy site via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            bash ~/maori_stock_bot/scripts/deploy-site.sh \
+              "${{ github.event.client_payload.repo_name }}" \
+              "${{ github.event.client_payload.github_owner }}"
