@@ -1,0 +1,31 @@
+name: Deploy Dashboard to GCP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "dashboard/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy dashboard via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            cd ~/maori_stock_bot
+            git pull origin main
+            cd dashboard
+            npm install
+            npm run build
+            pm2 describe dashboard > /dev/null 2>&1 \
+              && pm2 restart dashboard \
+              || pm2 start npm --name dashboard -- start
+            pm2 save
+            sudo cp ~/maori_stock_bot/nginx/dashboard.conf /etc/nginx/sites-available/dashboard.hhippo.co.il
+            sudo ln -sf /etc/nginx/sites-available/dashboard.hhippo.co.il /etc/nginx/sites-enabled/dashboard.hhippo.co.il
+            sudo nginx -t && sudo systemctl reload nginx
