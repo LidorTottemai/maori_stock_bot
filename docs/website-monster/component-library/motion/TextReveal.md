@@ -7,50 +7,46 @@
 > **עלות בנייה:** ~30 דקות
 
 ## מה זה
-חשיפת טקסט מילה-מילה בכניסה לעמוד. כל מילה עטופה בקונטיינר עם `overflow:hidden`, והספאן הפנימי עולה מלמטה (y:110%→0). מתאים לכותרות ראשיות, לייבלים גדולים ולטקסטי hero. נותן תחושה של טקסט שנחשף בצורה קינמטית.
+חושף טקסט מילה-מילה עם אנימציית slice מלמטה. כל מילה מוגנת ב-`overflow:hidden` כך שהtekst עולה מתוך הcontainer ויוצר מראה של כתיבה חיה. מתאים לכותרות ראשיות, תגיות עמוד, וכל טקסט שצריך להרגיש מוחשי ופרימיום. לא מתאים לפסקאות ארוכות.
 
 ## אנימציה — איך זה עובד
-1. הטקסט מפוצל למילים עם `split(" ")`
-2. כל מילה עטופה ב-`<span style={{ overflow:"hidden", display:"inline-block" }}`
-3. ספאן פנימי מתחיל ב-`y:"110%"` (מחוץ לקונטיינר, בלתי-נראה)
-4. `motion.span` מאניממ ל-`y:0` עם stagger על כל מילה
-5. `viewport once:true` — מופעל פעם אחת בכניסה לview
-
-```
-word container [overflow:hidden]
-  └── inner span: y: 110% → 0
-```
+הטקסט מפוצל למילים. כל מילה עטופה ב-`<span style={{ overflow:"hidden", display:"inline-block" }}>`. בתוכה span פנימי שמתחיל ב-`y: "110%"` ומגיע ל-`y: 0`. ה-stagger מחושב עם `transition.delay = index * stagger`. האיזינג הוא custom cubic bezier `[0.22, 1, 0.36, 1]` (expo out) שנותן תחושת קפיצה אורגנית. `once: true` מונע חזרה בגלילה.
 
 ## Variants / Stories
 | Story | תיאור |
 |-------|-------|
-| Default | ביטוי אחד, stagger ברירת מחדל 0.07s |
-| SlowStagger | stagger=0.15s, אנימציה איטית ומושכת |
-| Delayed | delay=0.5s, מחכה לפני התחלה |
-| LongText | משפט ארוך עם הרבה מילים |
-| CustomEase | ease שונה, תחושת bounce קל |
+| Default | משפט קצר עם stagger ברירת מחדל 0.07s |
+| FastStagger | stagger 0.03s — מהיר יותר, מתאים לכותרות קצרות |
+| SlowStagger | stagger 0.12s — דרמטי, מתאים לציטוטים |
+| WithDelay | delay 0.5s — ממתין לפני שמתחיל |
+| LongText | שורות מרובות — בדיקת עטיפה |
+| DarkBackground | על רקע כהה |
 
 ## Props API
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| text | string | — | הטקסט להצגה (required) |
-| className | string | "" | CSS class נוסף על ה-wrapper |
-| delay | number | 0 | עיכוב לפני תחילת האנימציה (שניות) |
-| stagger | number | 0.07 | עיכוב בין מילה למילה (שניות) |
-| ease | number[] | [0.22,1,0.36,1] | cubic-bezier curve |
-| duration | number | 0.8 | משך האנימציה של כל מילה (שניות) |
-| as | ElementType | "p" | תג ה-HTML של ה-wrapper |
+| text | string | — | הטקסט לחשיפה (חובה) |
+| className | string | undefined | class נוסף על הwrapper |
+| delay | number | 0 | עיכוב בשניות לפני תחילת האנימציה |
+| stagger | number | 0.07 | זמן בשניות בין מילה למילה |
+| ease | [number,number,number,number] | [0.22,1,0.36,1] | cubic bezier לאיזינג |
+| duration | number | 0.7 | משך האנימציה לכל מילה בשניות |
+| as | keyof JSX.IntrinsicElements | "p" | אלמנט HTML לרינדור (h1, h2, span וכו') |
 
 ## שימוש
 ```tsx
 import { TextReveal } from "@tottemai/ui"
 
+// שימוש בסיסי
+<TextReveal text="אנחנו בונים את העתיד" as="h1" />
+
+// עם stagger מהיר וdelay
 <TextReveal
-  text="Building the future of web"
-  stagger={0.07}
-  delay={0.2}
-  as="h1"
-  className="text-5xl font-bold"
+  text="Welcome to the future of design"
+  as="h2"
+  delay={0.3}
+  stagger={0.05}
+  className="text-4xl font-bold"
 />
 ```
 
@@ -59,7 +55,7 @@ import { TextReveal } from "@tottemai/ui"
 "use client"
 // src/motion/TextReveal.tsx
 import { motion, useInView } from "motion/react"
-import { useRef, ElementType } from "react"
+import { useRef, useMemo } from "react"
 
 interface TextRevealProps {
   text: string
@@ -68,16 +64,16 @@ interface TextRevealProps {
   stagger?: number
   ease?: [number, number, number, number]
   duration?: number
-  as?: ElementType
+  as?: keyof JSX.IntrinsicElements
 }
 
 export function TextReveal({
   text,
-  className = "",
+  className,
   delay = 0,
   stagger = 0.07,
   ease = [0.22, 1, 0.36, 1],
-  duration = 0.8,
+  duration = 0.7,
   as: Tag = "p",
 }: TextRevealProps) {
   const ref = useRef<HTMLElement>(null)
@@ -86,38 +82,29 @@ export function TextReveal({
     margin: "-80px",
   })
 
-  const words = text.split(" ")
-
-  const prefersReduced =
-    typeof window !== "undefined"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false
+  const words = useMemo(() => text.split(" "), [text])
 
   return (
-    <Tag ref={ref} className={className} aria-label={text}>
+    <Tag ref={ref as any} className={className} aria-label={text}>
       {words.map((word, i) => (
         <span
-          key={i}
+          key={`${word}-${i}`}
           style={{
-            display: "inline-block",
             overflow: "hidden",
-            verticalAlign: "bottom",
+            display: "inline-block",
             marginRight: "0.25em",
           }}
         >
           <motion.span
-            style={{ display: "inline-block" }}
+            aria-hidden="true"
             initial={{ y: "110%" }}
             animate={isInView ? { y: "0%" } : { y: "110%" }}
-            transition={
-              prefersReduced
-                ? { duration: 0 }
-                : {
-                    duration,
-                    delay: delay + i * stagger,
-                    ease,
-                  }
-            }
+            transition={{
+              duration,
+              delay: delay + i * stagger,
+              ease,
+            }}
+            style={{ display: "inline-block" }}
           >
             {word}
           </motion.span>
