@@ -7,163 +7,172 @@
 > **עלות בנייה:** ~20 דקות
 
 ## מה זה
-קומפוננטת Popover המבוססת על Radix UI. מציגה תוכן floating מעל הדף, עם תמיכה באפשרויות placement שונות, חץ ויזואלי, וסגירה אוטומטית בלחיצה מחוץ לאלמנט.
+קומפוננטת Popover מבוססת Radix UI, מציגה תוכן צף מעל העמוד בקרבת אלמנט trigger. תומכת בהצבה גמישה (top/bottom/left/right + start/center/end), חץ אופציונלי, וסגירה אוטומטית בקליק מחוץ לאזור.
 
 ## Variants / Stories
 | Story | תיאור |
 |-------|-------|
-| Default | Popover בסיסי עם כפתור trigger |
-| WithArrow | Popover עם חץ מצביע |
-| TopPlacement | ממוקם מעל ה-trigger |
-| BottomPlacement | ממוקם מתחת ה-trigger (ברירת מחדל) |
-| StartPlacement | יישור לצד הטקסט |
-| FormPopover | Popover עם טופס פנימי |
+| Default | popover בסיסי עם כותרת ותוכן |
+| WithArrow | popover עם חץ המצביע ל-trigger |
+| Placements | הדגמת כל כיווני ההצבה |
+| Form | popover המכיל טופס פשוט |
+| Controlled | מצב נשלט עם isOpen / onOpenChange |
 
 ## Props API / Return Value
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | open | `boolean` | `undefined` | מצב נשלט |
-| defaultOpen | `boolean` | `false` | מצב פתיחה התחלתי |
-| onOpenChange | `(open: boolean) => void` | `undefined` | callback לשינוי מצב |
+| defaultOpen | `boolean` | `false` | פתוח כברירת מחדל |
+| onOpenChange | `(open: boolean) => void` | `undefined` | callback בשינוי |
+| modal | `boolean` | `false` | מצב מודאל (trap focus) |
 
-**PopoverTrigger Props**
+### PopoverContent Props
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| asChild | `boolean` | `false` | מרנדר ילד ישיר כ-trigger |
-| children | `React.ReactNode` | — | אלמנט הפעלה |
-
-**PopoverContent Props**
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| side | `"top" \| "bottom" \| "left" \| "right"` | `"bottom"` | כיוון הצגה |
+| side | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | צד ביחס ל-trigger |
 | align | `"start" \| "center" \| "end"` | `"center"` | יישור |
-| sideOffset | `number` | `8` | מרחק מה-trigger (px) |
+| sideOffset | `number` | `8` | רווח בפיקסלים מה-trigger |
 | showArrow | `boolean` | `false` | הצגת חץ |
-| className | `string` | `undefined` | class נוסף |
-| children | `React.ReactNode` | — | תוכן ה-popover |
+| className | `string` | `""` | CSS נוסף |
 
 ## שימוש בסיסי
-```tsx
+\`\`\`tsx
 import { Popover, PopoverTrigger, PopoverContent } from "@tottemai/ui"
 
 <Popover>
   <PopoverTrigger asChild>
     <button>פתח Popover</button>
   </PopoverTrigger>
-  <PopoverContent side="bottom" showArrow>
-    <p>תוכן ה-Popover מופיע כאן</p>
+  <PopoverContent showArrow>
+    <p>תוכן ה-Popover</p>
   </PopoverContent>
 </Popover>
-```
+\`\`\`
 
 ## קוד מלא
-```tsx
+\`\`\`tsx
+import * as React from "react"
 import * as RadixPopover from "@radix-ui/react-popover"
-import React from "react"
 
-const KEYFRAMES = `
-@keyframes popover-in {
-  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes popover-out {
-  from { opacity: 1; transform: scale(1) translateY(0); }
-  to   { opacity: 0; transform: scale(0.95) translateY(-4px); }
-}
-`
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-function injectKeyframes() {
-  if (typeof document === "undefined") return
-  if (document.getElementById("tottemai-popover-kf")) return
-  const style = document.createElement("style")
-  style.id = "tottemai-popover-kf"
-  style.textContent = KEYFRAMES
-  document.head.appendChild(style)
-}
-
-// Root
-interface PopoverProps {
-  open?: boolean
-  defaultOpen?: boolean
-  onOpenChange?: (open: boolean) => void
-  children: React.ReactNode
-}
-
-export function Popover({ open, defaultOpen, onOpenChange, children }: PopoverProps) {
-  React.useEffect(() => { injectKeyframes() }, [])
-  return (
-    <RadixPopover.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
-      {children}
-    </RadixPopover.Root>
-  )
-}
-
-// Trigger
-export const PopoverTrigger = RadixPopover.Trigger
-
-// Content
-interface PopoverContentProps {
-  side?: "top" | "bottom" | "left" | "right"
-  align?: "start" | "center" | "end"
-  sideOffset?: number
+interface PopoverContentProps extends React.ComponentPropsWithoutRef<typeof RadixPopover.Content> {
   showArrow?: boolean
-  className?: string
-  style?: React.CSSProperties
-  children: React.ReactNode
 }
 
-export function PopoverContent({
-  side = "bottom",
-  align = "center",
-  sideOffset = 8,
-  showArrow = false,
-  className,
-  style,
-  children,
-}: PopoverContentProps) {
-  return (
-    <RadixPopover.Portal>
+// ─── Popover (root) ──────────────────────────────────────────────────────────
+
+const Popover = RadixPopover.Root
+const PopoverTrigger = RadixPopover.Trigger
+const PopoverPortal = RadixPopover.Portal
+
+// ─── PopoverContent ──────────────────────────────────────────────────────────
+
+const PopoverContent = React.forwardRef<
+  React.ElementRef<typeof RadixPopover.Content>,
+  PopoverContentProps
+>(
+  (
+    {
+      style,
+      children,
+      showArrow = false,
+      sideOffset = 8,
+      align = "center",
+      side = "bottom",
+      ...props
+    },
+    ref
+  ) => (
+    <PopoverPortal>
       <RadixPopover.Content
-        side={side}
-        align={align}
+        ref={ref}
         sideOffset={sideOffset}
-        className={className}
+        align={align}
+        side={side}
         style={{
-          zIndex: "var(--z-popover, 50)",
-          background: "var(--popover-bg, var(--color-surface))",
-          border: "1px solid var(--popover-border, var(--color-border))",
-          borderRadius: "var(--popover-radius, var(--radius-md, 8px))",
+          background: "var(--color-surface-overlay)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-lg)",
           boxShadow: "var(--shadow-lg)",
-          padding: "var(--popover-padding, var(--spacing-4, 16px))",
-          minWidth: "var(--popover-min-width, 200px)",
-          maxWidth: "var(--popover-max-width, 360px)",
-          color: "var(--popover-color, var(--color-text))",
-          fontSize: "var(--popover-font-size, var(--text-sm, 0.875rem))",
-          animationDuration: "var(--duration-150, 150ms)",
-          animationTimingFunction: "var(--ease-out, ease-out)",
-          outline: "none",
+          padding: "var(--spacing-4)",
+          maxWidth: "320px",
+          zIndex: "var(--z-popover)",
+          animationDuration: "var(--duration-normal)",
+          transformOrigin: "var(--radix-popover-content-transform-origin)",
           ...style,
         }}
+        {...props}
       >
         {children}
         {showArrow && (
           <RadixPopover.Arrow
             style={{
-              fill: "var(--popover-arrow-fill, var(--color-surface))",
-              filter: "drop-shadow(0 1px 0 var(--popover-border, var(--color-border)))",
+              fill: "var(--color-surface-overlay)",
+              stroke: "var(--color-border)",
             }}
             width={12}
             height={6}
           />
         )}
       </RadixPopover.Content>
-    </RadixPopover.Portal>
+    </PopoverPortal>
   )
-}
+)
 
-// Close button (optional utility)
-export const PopoverClose = RadixPopover.Close
-```
+PopoverContent.displayName = "PopoverContent"
+
+// ─── PopoverClose ────────────────────────────────────────────────────────────
+
+const PopoverClose = React.forwardRef<
+  React.ElementRef<typeof RadixPopover.Close>,
+  React.ComponentPropsWithoutRef<typeof RadixPopover.Close>
+>(({ style, children, ...props }, ref) => (
+  <RadixPopover.Close
+    ref={ref}
+    style={{
+      background: "none",
+      border: "none",
+      cursor: "pointer",
+      color: "var(--color-text-muted)",
+      padding: "var(--spacing-1)",
+      borderRadius: "var(--radius-sm)",
+      ...style,
+    }}
+    {...props}
+  >
+    {children ?? (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    )}
+  </RadixPopover.Close>
+))
+
+PopoverClose.displayName = "PopoverClose"
+
+/*
+ * CSS for entry/exit animations:
+ *
+ * [data-radix-popper-content-wrapper] [data-state="open"] {
+ *   animation: popover-in var(--duration-normal) var(--ease-out);
+ * }
+ * [data-radix-popper-content-wrapper] [data-state="closed"] {
+ *   animation: popover-out var(--duration-fast) var(--ease-in);
+ * }
+ * @keyframes popover-in {
+ *   from { opacity: 0; transform: scale(0.96) }
+ *   to   { opacity: 1; transform: scale(1) }
+ * }
+ * @keyframes popover-out {
+ *   from { opacity: 1; transform: scale(1) }
+ *   to   { opacity: 0; transform: scale(0.96) }
+ * }
+ */
+
+export { Popover, PopoverTrigger, PopoverPortal, PopoverContent, PopoverClose }
+export type { PopoverContentProps }
+\`\`\`
 
 ## בדיקות סיום
 - [ ] מרנדר בלי שגיאות

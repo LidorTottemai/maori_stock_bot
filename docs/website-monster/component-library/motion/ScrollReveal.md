@@ -7,57 +7,53 @@
 > **עלות בנייה:** ~30 דקות
 
 ## מה זה
-עוטף כל תוכן ומוסיף אנימציית fade + slide כשהאלמנט נכנס לviewport. עובד עם כיוונים: up, down, left, right. מתאים לקארדים, סקשנים, תמונות וכל אלמנט שרוצים להדגיש בגלילה. ה-wrapper שקוף לחלוטין מבחינת עיצוב — כל הסטיילינג מגיע מה-children.
+עוטף כל תוכן ומוסיף אנימציית fade+slide כשהאלמנט נכנס לviewport. זה הcomponent הכי שימושי בספרייה — אפשר לעטוף בו כרטיסים, כותרות, תמונות, רשימות. מתאים לכל עמוד שצריך תחושת גילוי בגלילה. כיוון האנימציה (up/down/left/right) מאפשר גיוון ויזואלי בין סקשנים שונים.
 
 ## אנימציה — איך זה עובד
-1. `whileInView` מגדיר את הstate הסופי `{ opacity:1, x:0, y:0 }`
-2. `initial` מחושב לפי `direction` + `distance`
-3. `viewport={{ once: true, margin: "-80px" }}` — מופעל פעם אחת, מעט לפני שהאלמנט נכנס למסך
-4. `ease: [0.22,1,0.36,1]` — expo-like ease out
-
-```
-direction: "up"   → initial: { y: +distance, opacity: 0 }
-direction: "down" → initial: { y: -distance, opacity: 0 }
-direction: "left" → initial: { x: +distance, opacity: 0 }
-direction: "right"→ initial: { x: -distance, opacity: 0 }
-```
+`whileInView` של framer-motion מפעיל אנימציה כש-80px מהאלמנט נכנסים לviewport (`margin: "-80px"`). `viewport={{ once: true }}` מונע חזרה. המצב ההתחלתי מחושב לפי `direction`: up→`y: distance`, down→`y: -distance`, left→`x: distance`, right→`x: -distance`. תמיד גם `opacity: 0`. המצב הסופי הוא `{ x: 0, y: 0, opacity: 1 }`. ease `[0.22, 1, 0.36, 1]`.
 
 ## Variants / Stories
 | Story | תיאור |
 |-------|-------|
-| Up | fade+slide מלמטה (ברירת מחדל) |
-| Down | fade+slide מלמעלה |
-| Left | fade+slide משמאל |
-| Right | fade+slide מימין |
-| Staggered | רשימת קארדים, כל אחד delayed |
-| LargeDistance | distance=100px, תנועה דרמטית יותר |
+| Default | fade+slide מלמטה, 40px |
+| DirectionUp | מלמעלה למטה |
+| DirectionLeft | מימין לשמאל |
+| DirectionRight | משמאל לימין |
+| CustomDistance | distance 80px — נסיעה ארוכה |
+| WithDelay | delay 0.2s לstagger ידני בין elements |
+| Grid | 4 כרטיסים עם delay גדל ב-0.1s לכל אחד |
 
 ## Props API
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| children | ReactNode | — | תוכן לעטוף (required) |
-| direction | "up" \| "down" \| "left" \| "right" | "up" | כיוון הslide |
-| distance | number | 40 | מרחק הslide בpixels |
-| delay | number | 0 | עיכוב לפני האנימציה (שניות) |
-| duration | number | 0.7 | משך האנימציה (שניות) |
-| ease | number[] | [0.22,1,0.36,1] | cubic-bezier curve |
-| className | string | "" | CSS class על ה-wrapper |
-| margin | string | "-80px" | viewport intersection margin |
+| children | React.ReactNode | — | התוכן לעטוף (חובה) |
+| direction | "up" \| "down" \| "left" \| "right" | "up" | כיוון תנועת הכניסה |
+| distance | number | 40 | מרחק בפיקסלים להזזה ההתחלתית |
+| delay | number | 0 | עיכוב בשניות |
+| duration | number | 0.6 | משך האנימציה בשניות |
+| className | string | undefined | class נוסף על הwrapper |
+| ease | [number,number,number,number] | [0.22,1,0.36,1] | cubic bezier לאיזינג |
 
 ## שימוש
 ```tsx
 import { ScrollReveal } from "@tottemai/ui"
 
-<ScrollReveal direction="up" delay={0.1}>
-  <Card title="Feature" description="Some feature description" />
+// כרטיס בסיסי
+<ScrollReveal>
+  <Card />
 </ScrollReveal>
 
-{/* Staggered list */}
+// רשת עם stagger
 {items.map((item, i) => (
-  <ScrollReveal key={item.id} direction="up" delay={i * 0.1}>
-    <FeatureCard {...item} />
+  <ScrollReveal key={item.id} delay={i * 0.1} direction="up">
+    <ProjectCard {...item} />
   </ScrollReveal>
 ))}
+
+// slide מהצד
+<ScrollReveal direction="left" distance={60}>
+  <FeatureSection />
+</ScrollReveal>
 ```
 
 ## קוד מלא
@@ -65,31 +61,30 @@ import { ScrollReveal } from "@tottemai/ui"
 "use client"
 // src/motion/ScrollReveal.tsx
 import { motion } from "motion/react"
-import { ReactNode } from "react"
-
-type Direction = "up" | "down" | "left" | "right"
 
 interface ScrollRevealProps {
-  children: ReactNode
-  direction?: Direction
+  children: React.ReactNode
+  direction?: "up" | "down" | "left" | "right"
   distance?: number
   delay?: number
   duration?: number
-  ease?: [number, number, number, number]
   className?: string
-  margin?: string
+  ease?: [number, number, number, number]
 }
 
-function getInitial(direction: Direction, distance: number) {
+function getInitial(
+  direction: "up" | "down" | "left" | "right",
+  distance: number
+): { x?: number; y?: number; opacity: number } {
   switch (direction) {
     case "up":
-      return { opacity: 0, y: distance }
+      return { y: distance, opacity: 0 }
     case "down":
-      return { opacity: 0, y: -distance }
+      return { y: -distance, opacity: 0 }
     case "left":
-      return { opacity: 0, x: distance }
+      return { x: distance, opacity: 0 }
     case "right":
-      return { opacity: 0, x: -distance }
+      return { x: -distance, opacity: 0 }
   }
 }
 
@@ -98,31 +93,19 @@ export function ScrollReveal({
   direction = "up",
   distance = 40,
   delay = 0,
-  duration = 0.7,
+  duration = 0.6,
+  className,
   ease = [0.22, 1, 0.36, 1],
-  className = "",
-  margin = "-80px",
 }: ScrollRevealProps) {
-  const prefersReduced =
-    typeof window !== "undefined"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false
-
-  const initial = prefersReduced
-    ? { opacity: 0 }
-    : getInitial(direction, distance)
+  const initial = getInitial(direction, distance)
 
   return (
     <motion.div
       className={className}
       initial={initial}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, margin }}
-      transition={
-        prefersReduced
-          ? { duration: 0.15 }
-          : { duration, delay, ease }
-      }
+      whileInView={{ x: 0, y: 0, opacity: 1 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration, delay, ease }}
     >
       {children}
     </motion.div>
