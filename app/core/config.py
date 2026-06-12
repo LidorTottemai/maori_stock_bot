@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     outreach_price_ils: int = 1250
     daily_combos: int = 3
 
+    # Quality loop
+    anthropic_api_key: str = ""
+    quality_min_score: int = 8
+    quality_max_attempts: int = 3
+
 
 @lru_cache
 def get_settings() -> Settings:
