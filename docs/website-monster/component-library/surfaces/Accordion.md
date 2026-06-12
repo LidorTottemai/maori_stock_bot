@@ -7,49 +7,44 @@
 > **עלות בנייה:** ~20 דקות
 
 ## מה זה
-קומפוננטת Accordion המבוססת על Radix UI. תומכת בפתיחת פריט בודד (single) או מספר פריטים בו-זמנית (multiple), עם אנימציית expand מוחלקת ואפשרות לאייקון trigger מותאם אישית.
+קומפוננטת Accordion מבוססת Radix UI, מאפשרת פתיחה של פסקה אחת או מרובות בו-זמנית. כוללת אנימציית התרחבות חלקה, אייקון חץ מסתובב, ונגישות מלאה מחוץ לקופסה.
 
 ## Variants / Stories
 | Story | תיאור |
 |-------|-------|
-| Single | רק פריט אחד פתוח בכל פעם |
-| Multiple | מספר פריטים פתוחים בו-זמנית |
-| CustomIcon | Trigger עם אייקון חץ מותאם |
-| DefaultOpen | פריט פתוח מראש |
+| SingleOpen | רק פריט אחד פתוח בכל פעם |
+| MultipleOpen | מרובה פריטים פתוחים בו-זמנית |
+| DefaultOpen | פריט פתוח מראש בטעינה |
+| CustomIcon | אייקון trigger מותאם אישית |
 | Disabled | פריט מושבת |
 
 ## Props API / Return Value
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | type | `"single" \| "multiple"` | `"single"` | מצב פתיחה |
-| defaultValue | `string \| string[]` | `undefined` | ערך פתוח ברירת מחדל |
+| defaultValue | `string \| string[]` | `undefined` | ערך פתוח כברירת מחדל |
 | value | `string \| string[]` | `undefined` | ערך נשלט |
-| onValueChange | `(value) => void` | `undefined` | callback לשינוי ערך |
-| collapsible | `boolean` | `true` | האם ניתן לסגור כולם (single בלבד) |
-| className | `string` | `undefined` | class נוסף |
+| onValueChange | `(value: string \| string[]) => void` | `undefined` | callback בשינוי |
+| collapsible | `boolean` | `true` | אפשרות לסגור את הפריט הפתוח (רק ב-single) |
+| className | `string` | `""` | CSS נוסף |
 
-**AccordionItem Props**
+### AccordionItem Props
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| value | `string` | — | מזהה ייחודי של הפריט |
+| value | `string` | — | מזהה ייחודי (חובה) |
 | disabled | `boolean` | `false` | השבתת הפריט |
 
-**AccordionTrigger Props**
+### AccordionTrigger Props
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| icon | `React.ReactNode` | ChevronDown | אייקון trigger מותאם |
+| icon | `React.ReactNode` | `<ChevronDown>` | אייקון מותאם |
 | children | `React.ReactNode` | — | טקסט הכותרת |
 
-**AccordionContent Props**
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| children | `React.ReactNode` | — | תוכן הפריט |
-
 ## שימוש בסיסי
-```tsx
+\`\`\`tsx
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@tottemai/ui"
 
-<Accordion type="single" collapsible>
+<Accordion type="single" collapsible defaultValue="item-1">
   <AccordionItem value="item-1">
     <AccordionTrigger>שאלה ראשונה</AccordionTrigger>
     <AccordionContent>תשובה לשאלה הראשונה</AccordionContent>
@@ -59,122 +54,22 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@t
     <AccordionContent>תשובה לשאלה השנייה</AccordionContent>
   </AccordionItem>
 </Accordion>
-```
+\`\`\`
 
 ## קוד מלא
-```tsx
+\`\`\`tsx
+import * as React from "react"
 import * as RadixAccordion from "@radix-ui/react-accordion"
-import React from "react"
 
-// --- Keyframes injected once ---
-const KEYFRAMES = `
-@keyframes accordion-down {
-  from { height: 0; opacity: 0; }
-  to { height: var(--radix-accordion-content-height); opacity: 1; }
-}
-@keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); opacity: 1; }
-  to { height: 0; opacity: 0; }
-}
-`
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-function injectKeyframes() {
-  if (typeof document === "undefined") return
-  if (document.getElementById("tottemai-accordion-kf")) return
-  const style = document.createElement("style")
-  style.id = "tottemai-accordion-kf"
-  style.textContent = KEYFRAMES
-  document.head.appendChild(style)
+interface AccordionTriggerProps extends React.ComponentPropsWithoutRef<typeof RadixAccordion.Trigger> {
+  icon?: React.ReactNode
 }
 
-// Accordion root
-interface AccordionProps {
-  type?: "single" | "multiple"
-  defaultValue?: string | string[]
-  value?: string | string[]
-  onValueChange?: ((value: string) => void) | ((value: string[]) => void)
-  collapsible?: boolean
-  className?: string
-  style?: React.CSSProperties
-  children: React.ReactNode
-}
+// ─── ChevronDown icon (inline, no extra dep) ─────────────────────────────────
 
-export function Accordion({
-  type = "single",
-  defaultValue,
-  value,
-  onValueChange,
-  collapsible = true,
-  className,
-  style,
-  children,
-}: AccordionProps) {
-  React.useEffect(() => { injectKeyframes() }, [])
-
-  const sharedProps = {
-    style: {
-      width: "100%",
-      border: "1px solid var(--accordion-border, var(--color-border))",
-      borderRadius: "var(--accordion-radius, var(--radius-md, 8px))",
-      overflow: "hidden",
-      ...style,
-    },
-    className,
-  }
-
-  if (type === "multiple") {
-    return (
-      <RadixAccordion.Root
-        type="multiple"
-        defaultValue={defaultValue as string[] | undefined}
-        value={value as string[] | undefined}
-        onValueChange={onValueChange as ((value: string[]) => void) | undefined}
-        {...sharedProps}
-      >
-        {children}
-      </RadixAccordion.Root>
-    )
-  }
-
-  return (
-    <RadixAccordion.Root
-      type="single"
-      collapsible={collapsible}
-      defaultValue={defaultValue as string | undefined}
-      value={value as string | undefined}
-      onValueChange={onValueChange as ((value: string) => void) | undefined}
-      {...sharedProps}
-    >
-      {children}
-    </RadixAccordion.Root>
-  )
-}
-
-// AccordionItem
-interface AccordionItemProps {
-  value: string
-  disabled?: boolean
-  children: React.ReactNode
-  className?: string
-}
-
-export function AccordionItem({ value, disabled, children, className }: AccordionItemProps) {
-  return (
-    <RadixAccordion.Item
-      value={value}
-      disabled={disabled}
-      className={className}
-      style={{
-        borderBottom: "1px solid var(--accordion-border, var(--color-border))",
-      }}
-    >
-      {children}
-    </RadixAccordion.Item>
-  )
-}
-
-// ChevronDown SVG
-function ChevronDown() {
+function ChevronDownIcon({ style }: { style?: React.CSSProperties }) {
   return (
     <svg
       width="16"
@@ -182,89 +77,153 @@ function ChevronDown() {
       viewBox="0 0 16 16"
       fill="none"
       aria-hidden="true"
-      style={{
-        transition: "transform var(--duration-200, 200ms) var(--ease-out, ease-out)",
-      }}
+      style={style}
     >
-      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M4 6l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
 
-// AccordionTrigger
-interface AccordionTriggerProps {
-  children: React.ReactNode
-  icon?: React.ReactNode
-  className?: string
-}
+// ─── Accordion (root) ────────────────────────────────────────────────────────
 
-export function AccordionTrigger({ children, icon, className }: AccordionTriggerProps) {
-  return (
-    <RadixAccordion.Header style={{ margin: 0 }}>
-      <RadixAccordion.Trigger
-        className={className}
-        style={{
-          all: "unset",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-          padding: "var(--accordion-trigger-padding, var(--spacing-4, 16px) var(--spacing-5, 20px))",
-          fontSize: "var(--accordion-trigger-font-size, var(--text-base, 1rem))",
-          fontWeight: "var(--accordion-trigger-font-weight, 500)",
-          color: "var(--accordion-trigger-color, var(--color-text))",
-          background: "var(--accordion-trigger-bg, transparent)",
-          cursor: "pointer",
-          boxSizing: "border-box",
-        }}
-      >
-        {children}
-        <span
-          style={{
-            display: "inline-flex",
-            transition: "transform var(--duration-200, 200ms) var(--ease-out, ease-out)",
-          }}
-          // Radix adds data-state="open" on the parent trigger; rotate via CSS
-          aria-hidden
-        >
-          {icon ?? <ChevronDown />}
-        </span>
-      </RadixAccordion.Trigger>
-    </RadixAccordion.Header>
-  )
-}
+const Accordion = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Root>,
+  React.ComponentPropsWithoutRef<typeof RadixAccordion.Root>
+>(({ style, ...props }, ref) => (
+  <RadixAccordion.Root
+    ref={ref}
+    style={{
+      width: "100%",
+      ...style,
+    }}
+    {...props}
+  />
+))
 
-// AccordionContent
-interface AccordionContentProps {
-  children: React.ReactNode
-  className?: string
-}
+Accordion.displayName = "Accordion"
 
-export function AccordionContent({ children, className }: AccordionContentProps) {
-  return (
-    <RadixAccordion.Content
-      className={className}
+// ─── AccordionItem ───────────────────────────────────────────────────────────
+
+const AccordionItem = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Item>,
+  React.ComponentPropsWithoutRef<typeof RadixAccordion.Item>
+>(({ style, ...props }, ref) => (
+  <RadixAccordion.Item
+    ref={ref}
+    style={{
+      borderBottom: "1px solid var(--color-border)",
+      ...style,
+    }}
+    {...props}
+  />
+))
+
+AccordionItem.displayName = "AccordionItem"
+
+// ─── AccordionTrigger ────────────────────────────────────────────────────────
+
+const AccordionTrigger = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Trigger>,
+  AccordionTriggerProps
+>(({ style, children, icon, ...props }, ref) => (
+  <RadixAccordion.Header style={{ margin: 0 }}>
+    <RadixAccordion.Trigger
+      ref={ref}
       style={{
-        overflow: "hidden",
-        animationDuration: "var(--duration-300, 300ms)",
-        animationTimingFunction: "var(--ease-out, ease-out)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        padding: "var(--spacing-4) 0",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        fontSize: "var(--font-size-base)",
+        fontWeight: "var(--font-weight-medium)",
+        color: "var(--color-text)",
+        textAlign: "start",
+        ...style,
       }}
-      // Radix adds data-state so we animate via inline style fallback
+      {...props}
     >
-      <div
+      {children}
+      <span
+        aria-hidden="true"
         style={{
-          padding: "var(--accordion-content-padding, var(--spacing-4, 16px) var(--spacing-5, 20px) var(--spacing-5, 20px))",
-          color: "var(--accordion-content-color, var(--color-text-muted))",
-          fontSize: "var(--accordion-content-font-size, var(--text-sm, 0.875rem))",
-          lineHeight: "var(--accordion-content-line-height, 1.6)",
+          display: "inline-flex",
+          flexShrink: 0,
+          transition: "transform var(--duration-normal) var(--ease-out)",
         }}
+        data-accordion-icon=""
       >
-        {children}
-      </div>
-    </RadixAccordion.Content>
-  )
-}
-```
+        {icon ?? <ChevronDownIcon />}
+      </span>
+    </RadixAccordion.Trigger>
+  </RadixAccordion.Header>
+))
+
+AccordionTrigger.displayName = "AccordionTrigger"
+
+// ─── AccordionContent ────────────────────────────────────────────────────────
+
+const AccordionContent = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Content>,
+  React.ComponentPropsWithoutRef<typeof RadixAccordion.Content>
+>(({ style, children, ...props }, ref) => (
+  <RadixAccordion.Content
+    ref={ref}
+    style={{
+      overflow: "hidden",
+      ...style,
+    }}
+    {...props}
+  >
+    <div
+      style={{
+        paddingBottom: "var(--spacing-4)",
+        color: "var(--color-text-muted)",
+        fontSize: "var(--font-size-sm)",
+        lineHeight: "var(--line-height-relaxed)",
+      }}
+    >
+      {children}
+    </div>
+  </RadixAccordion.Content>
+))
+
+AccordionContent.displayName = "AccordionContent"
+
+/*
+ * CSS to add in your global stylesheet for the open/close animation:
+ *
+ * [data-radix-accordion-content] {
+ *   animation: accordion-down var(--duration-normal) var(--ease-out);
+ * }
+ * [data-radix-accordion-content][data-state="closed"] {
+ *   animation: accordion-up var(--duration-normal) var(--ease-out);
+ * }
+ * [data-radix-accordion-trigger][data-state="open"] [data-accordion-icon] {
+ *   transform: rotate(180deg);
+ * }
+ * @keyframes accordion-down {
+ *   from { height: 0 }
+ *   to   { height: var(--radix-accordion-content-height) }
+ * }
+ * @keyframes accordion-up {
+ *   from { height: var(--radix-accordion-content-height) }
+ *   to   { height: 0 }
+ * }
+ */
+
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
+export type { AccordionTriggerProps }
+\`\`\`
 
 ## בדיקות סיום
 - [ ] מרנדר בלי שגיאות

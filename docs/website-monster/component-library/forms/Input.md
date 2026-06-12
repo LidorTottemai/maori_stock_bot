@@ -1,49 +1,65 @@
 # Input
 
 > **קטגוריה:** forms
-> **תלויות:** clsx
+> **תלויות:** none (native input)
 > **Storybook:** src/stories/Input.stories.tsx
 > **קוד:** src/forms/Input.tsx
 > **עלות בנייה:** ~20 דקות
 
 ## מה זה
-שדה קלט טקסט עם תמיכה ב-icons, מצב שגיאה, disabled ו-RTL מלא.
+שדה קלט טקסט בסיסי עם תמיכה מלאה ב-icons משמאל/ימין, מצב שגיאה עם הודעה, disabled, סוגי input שונים (כולל password עם toggle חשיפה), ו-RTL מלא. משתמשת ב-React.forwardRef לגישה ישירה ל-DOM element.
 
 ## Variants / Stories
 | Story | תיאור |
 |-------|-------|
-| Default | שדה קלט רגיל |
-| WithLeftIcon | שדה עם icon בצד שמאל (RTL: ימין) |
-| WithRightIcon | שדה עם icon בצד ימין (RTL: שמאל) |
-| Error | שדה עם הודעת שגיאה |
-| Disabled | שדה מושבת |
-| Password | שדה סיסמה עם toggle visibility |
+| Default | שדה קלט רגיל עם placeholder |
+| WithIconLeft | אייקון בצד שמאל (חיפוש, דוא"ל) — מועבר לימין ב-RTL |
+| WithIconRight | אייקון בצד ימין (ניקוי, אישור) |
+| WithBothIcons | אייקון בשני הצדדים |
+| ErrorBool | border אדום בלי הודעה |
+| ErrorString | border אדום + הודעת שגיאה מתחת |
+| Disabled | שדה מושבת (cursor: not-allowed) |
+| Password | סוג password עם כפתור toggle הצג/הסתר |
+| Sizes | sm / md / lg |
+| RTL | ממשק ימין-לשמאל מלא |
 
 ## Props API
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| type | string | "text" | סוג ה-input |
-| error | boolean | false | מצב שגיאה (border אדום) |
-| iconLeft | React.ReactNode | — | אייקון בצד שמאל |
-| iconRight | React.ReactNode | — | אייקון בצד ימין |
-| disabled | boolean | false | השבתת השדה |
-| className | string | — | CSS classes נוספים |
+| type | `string` | `"text"` | סוג ה-input (text, email, password, number וכו') |
+| placeholder | `string` | `undefined` | טקסט placeholder |
+| value | `string` | `undefined` | ערך נשלט |
+| onChange | `(e: React.ChangeEvent<HTMLInputElement>) => void` | `undefined` | callback לשינוי ערך |
+| disabled | `boolean` | `false` | מנטרל את ה-input |
+| error | `boolean \| string` | `false` | מצב שגיאה — `true` לסגנון בלבד, `string` להודעה מתחת |
+| iconLeft | `React.ReactNode` | `undefined` | אייקון בצד inline-start |
+| iconRight | `React.ReactNode` | `undefined` | אייקון בצד inline-end |
+| size | `"sm" \| "md" \| "lg"` | `"md"` | גודל הקומפוננטה |
+| wrapperClassName | `string` | `undefined` | class נוסף לעטיפה החיצונית |
+| className | `string` | `undefined` | class נוסף לאלמנט ה-input עצמו |
 
 ## שימוש בסיסי
 ```tsx
 import { Input } from "@tottemai/ui"
 
-// Default
+// פשוט
 <Input placeholder="הכנס טקסט..." />
 
-// With left icon
-<Input iconLeft={<SearchIcon />} placeholder="חיפוש..." />
+// עם אייקון ושגיאה
+<Input
+  type="email"
+  placeholder="your@email.com"
+  iconLeft={<MailIcon />}
+  error="כתובת מייל לא תקינה"
+/>
 
-// Error state
-<Input error placeholder="שדה חובה" />
-
-// Password with toggle
+// password עם toggle
 <Input type="password" placeholder="סיסמה" />
+
+// RTL
+<div dir="rtl">
+  <Input placeholder="חפש..." iconLeft={<SearchIcon />} />
+</div>
 ```
 
 ## קוד מלא
@@ -51,143 +67,287 @@ import { Input } from "@tottemai/ui"
 // src/forms/Input.tsx
 "use client"
 import * as React from "react"
-import clsx from "clsx"
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type InputSize = "sm" | "md" | "lg"
 
 export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  error?: boolean
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+  /** אייקון בצד inline-start (מתחלף אוטומטית ב-RTL) */
   iconLeft?: React.ReactNode
+  /** אייקון בצד inline-end */
   iconRight?: React.ReactNode
+  /** מצב שגיאה: boolean לסגנון בלבד, string מציג הודעה מתחת */
+  error?: boolean | string
+  /** גודל הקומפוננטה */
+  size?: InputSize
+  /** class נוסף לעטיפה החיצונית */
+  wrapperClassName?: string
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  (
+// ─── Size maps ────────────────────────────────────────────────────────────────
+
+const INPUT_HEIGHT: Record<InputSize, string> = {
+  sm: "32px",
+  md: "40px",
+  lg: "48px",
+}
+
+const INPUT_FONT: Record<InputSize, string> = {
+  sm: "0.8125rem",
+  md: "0.875rem",
+  lg: "1rem",
+}
+
+const INPUT_PADDING_INLINE: Record<InputSize, string> = {
+  sm: "10px",
+  md: "12px",
+  lg: "16px",
+}
+
+// icon slot width = padding + icon size
+const ICON_SLOT: Record<InputSize, string> = {
+  sm: "30px",
+  md: "36px",
+  lg: "42px",
+}
+
+const ICON_INSET: Record<InputSize, string> = {
+  sm: "7px",
+  md: "9px",
+  lg: "12px",
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  function Input(
     {
       type = "text",
-      error = false,
       iconLeft,
       iconRight,
+      error,
+      size = "md",
       disabled = false,
+      wrapperClassName,
       className,
+      onFocus,
+      onBlur,
+      style,
+      id: idProp,
       ...props
     },
     ref
-  ) => {
+  ) {
+    const generatedId = React.useId()
+    const inputId = idProp ?? generatedId
+    const errorId = `${inputId}-error`
+
+    const [focused, setFocused] = React.useState(false)
     const [showPassword, setShowPassword] = React.useState(false)
+
     const isPassword = type === "password"
     const resolvedType = isPassword ? (showPassword ? "text" : "password") : type
+    const hasError = Boolean(error)
+    const errorMessage = typeof error === "string" ? error : undefined
+
+    // Determine which icon slots are occupied
+    // Password toggle replaces the iconRight slot
+    const showIconLeft = Boolean(iconLeft)
+    const showIconRight = Boolean(iconRight) && !isPassword
+    const showPasswordToggle = isPassword
+
+    const paddingStart = showIconLeft
+      ? `calc(${INPUT_PADDING_INLINE[size]} + ${ICON_SLOT[size]})`
+      : INPUT_PADDING_INLINE[size]
+    const paddingEnd =
+      showIconRight || showPasswordToggle
+        ? `calc(${INPUT_PADDING_INLINE[size]} + ${ICON_SLOT[size]})`
+        : INPUT_PADDING_INLINE[size]
+
+    const focusBorderColor = hasError
+      ? "var(--color-input-border-error)"
+      : "var(--color-ring)"
+    const focusShadow = hasError
+      ? "0 0 0 3px var(--color-error-ring, color-mix(in srgb, var(--color-input-border-error) 25%, transparent))"
+      : "0 0 0 3px var(--color-focus-ring, color-mix(in srgb, var(--color-ring) 25%, transparent))"
+
+    const inputStyle: React.CSSProperties = {
+      width: "100%",
+      boxSizing: "border-box",
+      height: INPUT_HEIGHT[size],
+      paddingInlineStart: paddingStart,
+      paddingInlineEnd: paddingEnd,
+      paddingBlock: "0",
+      fontSize: INPUT_FONT[size],
+      fontFamily: "inherit",
+      lineHeight: "1.5",
+      backgroundColor: disabled
+        ? "var(--color-input-disabled-bg)"
+        : "var(--color-input-bg)",
+      color: disabled
+        ? "var(--color-text-disabled, var(--color-input-placeholder))"
+        : "var(--color-input-text)",
+      border: "1px solid",
+      borderColor: hasError
+        ? "var(--color-input-border-error)"
+        : "var(--color-input-border)",
+      borderRadius: "var(--radius-md, 6px)",
+      outline: "none",
+      transition: "border-color 150ms ease, box-shadow 150ms ease",
+      cursor: disabled ? "not-allowed" : "text",
+      opacity: disabled ? 0.6 : 1,
+      ...(focused && {
+        borderColor: focusBorderColor,
+        boxShadow: focusShadow,
+      }),
+      ...style,
+    }
+
+    const iconBaseStyle: React.CSSProperties = {
+      position: "absolute",
+      top: "50%",
+      transform: "translateY(-50%)",
+      display: "flex",
+      alignItems: "center",
+      pointerEvents: "none",
+      userSelect: "none",
+      color: hasError
+        ? "var(--color-input-border-error)"
+        : "var(--color-input-placeholder)",
+    }
 
     return (
-      <div className={clsx("input-wrapper", className)} style={{ position: "relative", display: "inline-flex", width: "100%" }}>
-        {iconLeft && (
+      <div className={wrapperClassName} style={{ width: "100%" }}>
+        {/* Input + Icons wrapper */}
+        <div style={{ position: "relative", display: "inline-flex", width: "100%" }}>
+
+          {/* Icon Left (inline-start) */}
+          {showIconLeft && (
+            <span
+              aria-hidden="true"
+              style={{
+                ...iconBaseStyle,
+                insetInlineStart: ICON_INSET[size],
+              }}
+            >
+              {iconLeft}
+            </span>
+          )}
+
+          {/* The actual input element */}
+          <input
+            ref={ref}
+            id={inputId}
+            type={resolvedType}
+            disabled={disabled}
+            aria-invalid={hasError ? "true" : undefined}
+            aria-describedby={errorMessage ? errorId : undefined}
+            dir="auto"
+            className={className}
+            style={inputStyle}
+            onFocus={(e) => {
+              setFocused(true)
+              onFocus?.(e)
+            }}
+            onBlur={(e) => {
+              setFocused(false)
+              onBlur?.(e)
+            }}
+            {...props}
+          />
+
+          {/* Password visibility toggle */}
+          {showPasswordToggle && (
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+              onClick={() => !disabled && setShowPassword((p) => !p)}
+              style={{
+                position: "absolute",
+                insetInlineEnd: ICON_INSET[size],
+                top: "50%",
+                transform: "translateY(-50%)",
+                display: "flex",
+                alignItems: "center",
+                background: "none",
+                border: "none",
+                padding: "2px",
+                cursor: disabled ? "not-allowed" : "pointer",
+                color: "var(--color-input-placeholder)",
+                borderRadius: "var(--radius-sm, 3px)",
+                pointerEvents: disabled ? "none" : "auto",
+              }}
+              onFocus={(e) => e.stopPropagation()}
+            >
+              {showPassword ? (
+                /* Eye-off icon */
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                /* Eye icon */
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          )}
+
+          {/* Icon Right (inline-end) — not shown when password toggle is active */}
+          {showIconRight && (
+            <span
+              aria-hidden="true"
+              style={{
+                ...iconBaseStyle,
+                insetInlineEnd: ICON_INSET[size],
+              }}
+            >
+              {iconRight}
+            </span>
+          )}
+        </div>
+
+        {/* Error message */}
+        {errorMessage && (
           <span
-            aria-hidden="true"
+            id={errorId}
+            role="alert"
+            aria-live="polite"
             style={{
-              position: "absolute",
-              insetInlineStart: "0.75rem",
-              top: "50%",
-              transform: "translateY(-50%)",
-              pointerEvents: "none",
-              display: "flex",
-              alignItems: "center",
-              color: "var(--color-input-placeholder)",
+              display: "block",
+              marginTop: "4px",
+              fontSize: "0.75rem",
+              lineHeight: "1.4",
+              color: "var(--color-input-border-error)",
             }}
           >
-            {iconLeft}
-          </span>
-        )}
-
-        <input
-          ref={ref}
-          type={resolvedType}
-          disabled={disabled}
-          dir="auto"
-          aria-invalid={error ? "true" : undefined}
-          style={{
-            width: "100%",
-            paddingBlock: "0.5rem",
-            paddingInlineStart: iconLeft ? "2.5rem" : "0.75rem",
-            paddingInlineEnd: iconRight || isPassword ? "2.5rem" : "0.75rem",
-            backgroundColor: disabled
-              ? "var(--color-input-disabled-bg)"
-              : "var(--color-input-bg)",
-            color: "var(--color-input-text)",
-            border: "1px solid",
-            borderColor: error
-              ? "var(--color-input-border-error)"
-              : "var(--color-input-border)",
-            borderRadius: "0.375rem",
-            fontSize: "0.875rem",
-            lineHeight: "1.5",
-            outline: "none",
-            transition: "border-color 150ms ease, box-shadow 150ms ease",
-            cursor: disabled ? "not-allowed" : "text",
-            opacity: disabled ? 0.6 : 1,
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.boxShadow = `0 0 0 2px var(--color-ring)`
-            e.currentTarget.style.borderColor = error
-              ? "var(--color-input-border-error)"
-              : "var(--color-input-border)"
-            props.onFocus?.(e)
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.boxShadow = "none"
-            props.onBlur?.(e)
-          }}
-          placeholder={props.placeholder}
-          {...props}
-        />
-
-        {isPassword && (
-          <button
-            type="button"
-            aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-            onClick={() => setShowPassword((prev) => !prev)}
-            style={{
-              position: "absolute",
-              insetInlineEnd: "0.75rem",
-              top: "50%",
-              transform: "translateY(-50%)",
-              display: "flex",
-              alignItems: "center",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              color: "var(--color-input-placeholder)",
-            }}
-          >
-            {showPassword ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                <line x1="1" y1="1" x2="23" y2="23" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            )}
-          </button>
-        )}
-
-        {!isPassword && iconRight && (
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              insetInlineEnd: "0.75rem",
-              top: "50%",
-              transform: "translateY(-50%)",
-              pointerEvents: "none",
-              display: "flex",
-              alignItems: "center",
-              color: "var(--color-input-placeholder)",
-            }}
-          >
-            {iconRight}
+            {errorMessage}
           </span>
         )}
       </div>
@@ -206,13 +366,21 @@ export { Input }
 background: var(--color-input-bg);
 color: var(--color-input-text);
 border-color: var(--color-input-border);
-/* שגיאה */
+
+/* מצב שגיאה */
 border-color: var(--color-input-border-error);
+box-shadow: 0 0 0 3px var(--color-error-ring);
+
+/* focus ring */
+border-color: var(--color-ring);
+box-shadow: 0 0 0 3px var(--color-focus-ring);
+
 /* disabled */
 background: var(--color-input-disabled-bg);
-/* focus ring */
-box-shadow: 0 0 0 2px var(--color-ring);
-/* placeholder */
+color: var(--color-text-disabled);
+opacity: 0.6;
+
+/* placeholder / icon color */
 color: var(--color-input-placeholder);
 ```
 

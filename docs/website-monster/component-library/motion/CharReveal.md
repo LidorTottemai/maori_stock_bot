@@ -7,52 +7,47 @@
 > **עלות בנייה:** ~30 דקות
 
 ## מה זה
-חשיפת טקסט תו-תו — דרמטי יותר מ-TextReveal. כל תו עולה מלמטה בנפרד עם stagger של 0.03s. מיועד לכותרות hero גדולות, לוגואים מונפשים ומקומות שבהם רוצים רושם ראשוני חזק. **לא מתאים לגוש טקסט ארוך** — רק לכותרות קצרות.
+חושף טקסט תו-תו — דרמטי יותר מ-TextReveal ומתאים לכותרות hero. כשכל אות מופיעה בנפרד, האפקט כבד ועוצמתי. מתאים ל-hero headings קצרות (עד 30 תווים), לוגואים אנימטיביים, ולמספרים גדולים. לא מתאים לטקסט ארוך — stagger של 0.03s על 100 תווים יקח 3 שניות.
 
 ## אנימציה — איך זה עובד
-1. הטקסט מפוצל לתווים עם `split("")`
-2. רווחים מקבלים `&nbsp;` כדי לשמור עליהם
-3. כל תו עטוף ב-`<span style={{ overflow:"hidden" }}`
-4. ספאן פנימי מתחיל ב-`y:"110%"` + `opacity:0`
-5. stagger של 0.03s בין תו לתו
-6. `useInView` עם `once:true` מפעיל את הסדרה
-
-```
-char container [overflow:hidden]
-  └── inner span: y: 110%, opacity: 0 → y: 0, opacity: 1
-```
+הטקסט מפוצל לתווים (כולל רווחים, שנשמרים כ-` `). כל תו עטוף ב-`overflow:hidden` span. ה-inner span עולה מ-`y: "110%"` + `opacity: 0` ל-`y: 0` + `opacity: 1`. stagger של 0.03s בין תו לתו. האיזינג `[0.22, 1, 0.36, 1]` זהה ל-TextReveal לעקביות ויזואלית. שימוש ב-`useInView` עם `margin: "-80px"` מפעיל את האנימציה כשהאלמנט נכנס לtviewport.
 
 ## Variants / Stories
 | Story | תיאור |
 |-------|-------|
-| Default | מילה בודדת, stagger 0.03s |
-| HeroHeading | כותרת ארוכה, טקסט גדול |
-| WithOpacity | כולל fade-in על כל תו |
-| FastReveal | stagger=0.015s, חשיפה מהירה |
-| Scramble | אפקט extra: תווים rנ"ד לפני settle (variant מתקדם) |
+| Default | כותרת קצרה, stagger 0.03s |
+| HeroHeading | טקסט גדול על רקע כהה |
+| SlowDramatic | stagger 0.06s, duration 0.9s — אפקט סינמטי |
+| WithDelay | delay 0.8s — לאחרי pageTransition |
+| Numbers | מספרים גדולים — מחיר / סטטיסטיקה |
+| Colorful | כל תו בצבע שונה דרך className |
 
 ## Props API
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| text | string | — | הטקסט להצגה (required) |
-| className | string | "" | CSS class נוסף על ה-wrapper |
-| delay | number | 0 | עיכוב לפני תחילת האנימציה (שניות) |
-| stagger | number | 0.03 | עיכוב בין תו לתו (שניות) |
-| ease | number[] | [0.22,1,0.36,1] | cubic-bezier curve |
-| duration | number | 0.6 | משך האנימציה של כל תו (שניות) |
-| as | ElementType | "h2" | תג ה-HTML של ה-wrapper |
-| withOpacity | boolean | true | האם לכלול fade-in |
+| text | string | — | הטקסט לחשיפה (חובה) |
+| className | string | undefined | class נוסף על הwrapper |
+| delay | number | 0 | עיכוב בשניות לפני תחילת האנימציה |
+| stagger | number | 0.03 | זמן בשניות בין תו לתו |
+| ease | [number,number,number,number] | [0.22,1,0.36,1] | cubic bezier לאיזינג |
+| duration | number | 0.7 | משך האנימציה לכל תו בשניות |
+| as | keyof JSX.IntrinsicElements | "h1" | אלמנט HTML לרינדור |
 
 ## שימוש
 ```tsx
 import { CharReveal } from "@tottemai/ui"
 
+// כותרת hero
+<CharReveal text="Hello World" as="h1" className="text-6xl font-black" />
+
+// עם delay אחרי page transition
 <CharReveal
-  text="Hello World"
-  stagger={0.03}
-  delay={0}
+  text="Studio"
   as="h1"
-  className="text-8xl font-black tracking-tight"
+  delay={0.4}
+  stagger={0.04}
+  duration={0.8}
+  className="text-8xl font-bold tracking-tight"
 />
 ```
 
@@ -61,7 +56,7 @@ import { CharReveal } from "@tottemai/ui"
 "use client"
 // src/motion/CharReveal.tsx
 import { motion, useInView } from "motion/react"
-import { useRef, ElementType } from "react"
+import { useRef, useMemo } from "react"
 
 interface CharRevealProps {
   text: string
@@ -70,19 +65,17 @@ interface CharRevealProps {
   stagger?: number
   ease?: [number, number, number, number]
   duration?: number
-  as?: ElementType
-  withOpacity?: boolean
+  as?: keyof JSX.IntrinsicElements
 }
 
 export function CharReveal({
   text,
-  className = "",
+  className,
   delay = 0,
   stagger = 0.03,
   ease = [0.22, 1, 0.36, 1],
-  duration = 0.6,
-  as: Tag = "h2",
-  withOpacity = true,
+  duration = 0.7,
+  as: Tag = "h1",
 }: CharRevealProps) {
   const ref = useRef<HTMLElement>(null)
   const isInView = useInView(ref as React.RefObject<Element>, {
@@ -90,56 +83,38 @@ export function CharReveal({
     margin: "-80px",
   })
 
-  const prefersReduced =
-    typeof window !== "undefined"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false
-
-  // Split into chars, preserving spaces
-  const chars = text.split("")
-  let charIndex = 0
-
-  // Group chars into words so spaces render correctly
-  const words = text.split(" ")
+  const chars = useMemo(
+    () => text.split("").map((c) => (c === " " ? " " : c)),
+    [text]
+  )
 
   return (
-    <Tag ref={ref} className={className} aria-label={text}>
-      {words.map((word, wordIdx) => (
-        <span key={wordIdx} style={{ display: "inline-block", whiteSpace: "nowrap" }}>
-          {word.split("").map((char) => {
-            const currentIndex = charIndex++
-            return (
-              <span
-                key={currentIndex}
-                style={{ display: "inline-block", overflow: "hidden", verticalAlign: "bottom" }}
-              >
-                <motion.span
-                  style={{ display: "inline-block" }}
-                  initial={{ y: "110%", opacity: withOpacity ? 0 : 1 }}
-                  animate={
-                    isInView
-                      ? { y: "0%", opacity: 1 }
-                      : { y: "110%", opacity: withOpacity ? 0 : 1 }
-                  }
-                  transition={
-                    prefersReduced
-                      ? { duration: 0 }
-                      : {
-                          duration,
-                          delay: delay + currentIndex * stagger,
-                          ease,
-                        }
-                  }
-                >
-                  {char}
-                </motion.span>
-              </span>
-            )
-          })}
-          {/* Space between words — not animated */}
-          {wordIdx < words.length - 1 && (
-            <span style={{ display: "inline-block" }}>&nbsp;</span>
-          )}
+    <Tag ref={ref as any} className={className} aria-label={text}>
+      {chars.map((char, i) => (
+        <span
+          key={i}
+          style={{
+            overflow: "hidden",
+            display: "inline-block",
+          }}
+        >
+          <motion.span
+            aria-hidden="true"
+            initial={{ y: "110%", opacity: 0 }}
+            animate={
+              isInView
+                ? { y: "0%", opacity: 1 }
+                : { y: "110%", opacity: 0 }
+            }
+            transition={{
+              duration,
+              delay: delay + i * stagger,
+              ease,
+            }}
+            style={{ display: "inline-block" }}
+          >
+            {char}
+          </motion.span>
         </span>
       ))}
     </Tag>
