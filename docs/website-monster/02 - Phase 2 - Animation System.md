@@ -1,7 +1,8 @@
 # 🎬 Phase 2 — מערכת האנימציות
 
-> **מטרה:** 15 טכניקות אנימציה ברמת Awwwards, ממומשות כרכיבים ב-maori-ui.
-> **כלים:** Framer Motion (motion/react) + GSAP + ScrollTrigger + Lenis
+> **מטרה:** 15 טכניקות אנימציה ברמת Awwwards, ממומשות כרכיבים ב-`@tottemai/ui`.
+> **Repo:** `github:LidorTottemai/tottemai-ui` — תיקיית `src/motion/`
+> **כלים:** motion/react (Framer Motion) + GSAP + ScrollTrigger + Lenis
 
 ---
 
