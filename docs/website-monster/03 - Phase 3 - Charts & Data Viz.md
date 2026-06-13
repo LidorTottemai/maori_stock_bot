@@ -1,7 +1,9 @@
 # 📊 Phase 3 — Charts & Data Viz
 
-> **מטרה:** ספריית גרפים גנרית שמקבלת צבעים דרך CSS variables.
+> **מטרה:** גרפים גנריים שמקבלים צבעים דרך CSS variables.
 > **בחירה:** Recharts (SVG-based, React-native, קל לtheme)
+> **⚠️ לא חלק מ-`@tottemai/ui`** — מותקנים ישירות בפרויקטים שדורשים dashboard/data viz בלבד.
+> **תלות:** `recharts` + `@tottemai/ui` (לCountUp ו-CSS variables)
 
 ---
 
