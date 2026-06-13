@@ -1,6 +1,7 @@
 # 🌍 Phase 6 — Inspiration Crawler
 
-> **מטרה:** לפני כל בנייה, Claude ילמד מהאתרים הכי טובים בעולם בקטגוריה — לא מהממוצע.
+> **⚠️ שלב זה הועבר לפני מנוע הבנייה.**
+> **ראה:** [[03.5 - Phase 3.5 - Inspiration Crawler]] — הגרסה המלאה והעדכנית.
 > **קובץ:** `app/services/inspiration_crawler.py`
 
 ---
