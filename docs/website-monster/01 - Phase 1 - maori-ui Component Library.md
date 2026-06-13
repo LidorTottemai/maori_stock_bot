@@ -3,7 +3,7 @@
 > **מטרה:** ספריית רכיבים משותפת שכל אתר שנבנה מייבא ממנה.
 > **Package:** `@tottemai/ui`
 > **Repo:** `github:LidorTottemai/tottemai-ui#main`
-> **דוקומנטציה:** `docs/website-monster/component-library/` (104 קבצי Obsidian)
+> **דוקומנטציה:** `docs/website-monster/component-library/` (107 קבצי Obsidian)
 > **עלות:** ~4 שעות פיתוח ראשוני
 > **תלויות:** שלב זה הוא הבסיס לכל השאר.
 
@@ -49,7 +49,7 @@ content: [
 
 ---
 
-## מבנה הספרייה — 104 רכיבים
+## מבנה הספרייה — 107 רכיבים
 
 ```
 tottemai-ui/
@@ -172,14 +172,21 @@ tottemai-ui/
 │   │   ├── SparklesText.tsx  random sparkles on text
 │   │   └── AnimatedGradient.tsx moving mesh gradient background
 │   │
-│   └── hooks/                🪝 hooks (7)
-│       ├── useMousePosition.ts  { x, y } + normalized option
-│       ├── useScrollVelocity.ts scroll px/s with RAF decay
-│       ├── useReducedMotion.ts  prefers-reduced-motion reactive
-│       ├── useBreakpoint.ts     Tailwind breakpoints + isMobile/isTablet/isDesktop
-│       ├── useClickOutside.ts   ref + callback + enabled
-│       ├── useDebounce.ts       generic debounce
-│       └── useLocalStorage.ts   useState + localStorage + cross-tab sync
+│   ├── hooks/                🪝 hooks (7)
+│   │   ├── useMousePosition.ts  { x, y } + normalized option
+│   │   ├── useScrollVelocity.ts scroll px/s with RAF decay
+│   │   ├── useReducedMotion.ts  prefers-reduced-motion reactive
+│   │   ├── useBreakpoint.ts     Tailwind breakpoints + isMobile/isTablet/isDesktop
+│   │   ├── useClickOutside.ts   ref + callback + enabled
+│   │   ├── useDebounce.ts       generic debounce
+│   │   └── useLocalStorage.ts   useState + localStorage + cross-tab sync
+│   │
+│   └── a11y/                 ♿ נגישות (3 רכיבים + CSS)
+│       ├── AccessibilityWidget.tsx  כפתור צף + פאנל 10 כלים, i18n he/en
+│       ├── SkipLink.tsx             דלג לתוכן ראשי — sr-only → focus:visible
+│       ├── AccessibilityStatement.tsx דף הצהרת נגישות — IS 5568 / WCAG 2.0 AA
+│       ├── a11y.css                 data-attribute overrides (גופן/ניגודיות/אנימציות)
+│       └── index.ts
 │
 └── README.md
 ```
@@ -225,6 +232,29 @@ tottemai-ui/
 - **RTL:** כל layout משתמש ב-CSS logical properties (`margin-inline`, `padding-inline`, `inset-inline-start`)
 - **prefers-reduced-motion:** כל רכיב motion בודק `useReducedMotion()` ומחזיר גרסה סטטית
 - **aria-*:** כל Radix UI פרימיטיב כולל aria ו-keyboard nav אוטומטית
+- **a11y module:** `AccessibilityWidget` + `SkipLink` + `AccessibilityStatement` — מותקנים בכל אתר, עומדים בתקן ישראלי 5568
+
+### הוספת a11y לכל אתר
+
+```css
+/* globals.css */
+@import "@tottemai/ui/a11y.css";
+```
+
+```tsx
+// app/[locale]/layout.tsx
+import { SkipLink, AccessibilityWidget } from "@tottemai/ui"
+
+<SkipLink locale={locale} />           {/* ראשון בDOM */}
+<main id="main-content">{children}</main>
+<AccessibilityWidget                    /* אחרון בDOM */
+  locale={locale}
+  businessName={config.name}
+  phone={config.phone}
+  email={config.email}
+  statementUrl={`/${locale}/accessibility-statement`}
+/>
+```
 
 ---
 
@@ -261,6 +291,10 @@ async def ensure_library_repo(settings: Settings, http_client: httpx.AsyncClient
 - [ ] `ls tottemai-ui/src/motion/` → 13 קבצים
 - [ ] `ls tottemai-ui/src/forms/` → 17 קבצים
 - [ ] `ls tottemai-ui/src/special/` → 17 קבצים
+- [ ] `ls tottemai-ui/src/a11y/` → 5 קבצים (Widget, SkipLink, Statement, a11y.css, index.ts)
+- [ ] `AccessibilityWidget` מציג פאנל בעברית כש-locale="he", אנגלית כש-locale="en"
+- [ ] `SkipLink` נראה בfocus ראשון
+- [ ] `/accessibility-statement` קיים ומכיל פרטי קשר
 - [ ] `npm install @tottemai/ui` על אתר ריק → בנייה מצליחה
 - [ ] `TextReveal` מאנים נכון על מסך
 - [ ] `MagneticButton` מגיב ל-hover
