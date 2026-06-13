@@ -46,18 +46,31 @@ interface AccessibilityWidgetProps {
 
 ---
 
-## ארכיטקטורה — data-attributes
+## ארכיטקטורה — Zustand Store
 
-כל כלי מפעיל `data-a11y-*` attribute על `<html>` → CSS ב-`a11y.css` מגיב:
+**Widget כותב לstore, Provider מפעיל את השינויים.** Widget עצמו לא נוגע ב-DOM.
 
-```ts
-document.documentElement.dataset.a11yFontSize   = String(opts.fontSize)   // "0" | "1" | "2"
-document.documentElement.dataset.a11yContrast   = opts.contrast            // "normal" | "high" | "inverted"
-document.documentElement.dataset.a11yHighlight  = String(opts.highlightLinks)
-// ...וכן הלאה לכל 10 אפשרויות
+```
+AccessibilityWidget (כתיבה)
+       ↓
+useA11yStore (Zustand + persist)
+       ↓
+A11yProvider (קריאה → DOM)
+       ↓
+html.style.fontSize / html.style.filter / css classes / css variables
 ```
 
-יתרון: CSS בלבד → אין overhead על כל render, עובד עם SSR.
+```ts
+// Widget קורא ל-actions מהstore — לא מנהל state לוקאלי
+const { fontSize, setFontSize, contrast, setContrast, ... } = useA11yStore()
+
+// לחיצה על "גדל גופן":
+setFontSize(((fontSize + 1) % 3) as 0 | 1 | 2)
+// → Zustand עדכון → A11yProvider useEffect → html.style.fontSize = "112%"
+// → כל rem units בדף מדרגים אוטומטית
+```
+
+ראה [[A11yProvider]] למפת ה-DOM effects המלאה.
 
 ---
 
@@ -111,28 +124,9 @@ const LABELS = {
 ```tsx
 // src/a11y/AccessibilityWidget.tsx
 "use client"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { cn } from "../cn"
-
-interface A11yOptions {
-  fontSize:       0 | 1 | 2
-  contrast:       "normal" | "high" | "inverted"
-  highlightLinks: boolean
-  underlineLinks: boolean
-  bigCursor:      boolean
-  stopAnimations: boolean
-  readableFont:   boolean
-  lineHeight:     0 | 1 | 2
-  letterSpacing:  0 | 1 | 2
-  wordSpacing:    boolean
-}
-
-const DEFAULT: A11yOptions = {
-  fontSize: 0, contrast: "normal",
-  highlightLinks: false, underlineLinks: false,
-  bigCursor: false, stopAnimations: false, readableFont: false,
-  lineHeight: 0, letterSpacing: 0, wordSpacing: false,
-}
+import { useA11yStore } from "./useA11yStore"
 
 interface AccessibilityWidgetProps {
   businessName:  string
@@ -150,34 +144,24 @@ export function AccessibilityWidget({
   locale = "he",
 }: AccessibilityWidgetProps) {
   const [open, setOpen] = useState(false)
-  const [opts, setOpts] = useState<A11yOptions>(DEFAULT)
   const panelRef = useRef<HTMLDivElement>(null)
   const t = LABELS[locale]
   const isRTL = locale === "he"
 
-  // Restore from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("a11y-opts")
-      if (saved) setOpts(JSON.parse(saved))
-    } catch {}
-  }, [])
-
-  // Apply to <html> data-attributes + persist
-  useEffect(() => {
-    const h = document.documentElement
-    h.dataset.a11yFontSize    = String(opts.fontSize)
-    h.dataset.a11yContrast    = opts.contrast
-    h.dataset.a11yHighlight   = String(opts.highlightLinks)
-    h.dataset.a11yUnderline   = String(opts.underlineLinks)
-    h.dataset.a11yCursor      = String(opts.bigCursor)
-    h.dataset.a11yAnimations  = String(opts.stopAnimations)
-    h.dataset.a11yFont        = String(opts.readableFont)
-    h.dataset.a11yLineHeight  = String(opts.lineHeight)
-    h.dataset.a11yLetterSpace = String(opts.letterSpacing)
-    h.dataset.a11yWordSpace   = String(opts.wordSpacing)
-    try { localStorage.setItem("a11y-opts", JSON.stringify(opts)) } catch {}
-  }, [opts])
+  // קריאה מ-store (Zustand + persist → localStorage אוטומטי)
+  const {
+    fontSize, setFontSize,
+    contrast, setContrast,
+    highlightLinks, toggleHighlight,
+    underlineLinks, toggleUnderline,
+    bigCursor,      toggleBigCursor,
+    stopAnimations, toggleAnimations,
+    readableFont,   toggleReadableFont,
+    lineHeight,     setLineHeight,
+    letterSpacing,  setLetterSpacing,
+    wordSpacing,    toggleWordSpacing,
+    reset,
+  } = useA11yStore()
 
   // Close on Escape / outside click
   useEffect(() => {
@@ -193,14 +177,11 @@ export function AccessibilityWidget({
     }
   }, [open])
 
-  const cycle3 = useCallback((key: keyof A11yOptions) =>
-    setOpts(p => ({ ...p, [key]: ((p[key] as number) + 1) % 3 })), [])
-
-  const toggle = useCallback((key: keyof A11yOptions) =>
-    setOpts(p => ({ ...p, [key]: !p[key] })), [])
-
   const positionClass = isRTL ? "bottom-6 start-6" : "bottom-6 end-6"
   const panelPosClass = isRTL ? "bottom-16 start-0" : "bottom-16 end-0"
+
+  const nextContrast = () =>
+    setContrast(contrast === "normal" ? "high" : contrast === "high" ? "inverted" : "normal")
 
   return (
     <div ref={panelRef} className={cn("fixed z-[9999]", positionClass)} dir={isRTL ? "rtl" : "ltr"}>
@@ -218,7 +199,6 @@ export function AccessibilityWidget({
           "transition-transform hover:scale-110",
         )}
       >
-        {/* Wheelchair icon — embedded SVG, no deps */}
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <circle cx="12" cy="4" r="2"/>
           <path d="M10 9L8 17h8l1-5H10V9z"/>
@@ -240,28 +220,23 @@ export function AccessibilityWidget({
         >
           <h2 className="text-base font-bold text-[var(--color-text)] mb-3">{t.title}</h2>
 
-          <A11yRow label={t.fontSize}       value={[t.values.normal, t.values.large, t.values.xlarge][opts.fontSize]}  active={opts.fontSize > 0}       onClick={() => cycle3("fontSize")} />
-          <A11yRow label={t.contrast}       value={{ normal: t.values.normal, high: t.values.high, inverted: t.values.inverted }[opts.contrast]} active={opts.contrast !== "normal"} onClick={() => setOpts(p => ({ ...p, contrast: p.contrast === "normal" ? "high" : p.contrast === "high" ? "inverted" : "normal" }))} />
-          <A11yRow label={t.highlightLinks} value={opts.highlightLinks ? t.values.on : t.values.off} active={opts.highlightLinks} onClick={() => toggle("highlightLinks")} />
-          <A11yRow label={t.underlineLinks} value={opts.underlineLinks ? t.values.on : t.values.off} active={opts.underlineLinks} onClick={() => toggle("underlineLinks")} />
-          <A11yRow label={t.bigCursor}      value={opts.bigCursor      ? t.values.on : t.values.off} active={opts.bigCursor}      onClick={() => toggle("bigCursor")} />
-          <A11yRow label={t.stopAnimations} value={opts.stopAnimations ? t.values.on : t.values.off} active={opts.stopAnimations} onClick={() => toggle("stopAnimations")} />
-          <A11yRow label={t.readableFont}   value={opts.readableFont   ? t.values.on : t.values.off} active={opts.readableFont}   onClick={() => toggle("readableFont")} />
-          <A11yRow label={t.lineHeight}     value={[t.values.normal, t.values.x15, t.values.x2][opts.lineHeight]}    active={opts.lineHeight > 0}     onClick={() => cycle3("lineHeight")} />
-          <A11yRow label={t.letterSpacing}  value={[t.values.normal, t.values.p1,  t.values.p3][opts.letterSpacing]} active={opts.letterSpacing > 0}  onClick={() => cycle3("letterSpacing")} />
-          <A11yRow label={t.wordSpacing}    value={opts.wordSpacing    ? t.values.on : t.values.off} active={opts.wordSpacing}    onClick={() => toggle("wordSpacing")} />
+          {/* כל כפתור קורא ל-store action ישירות */}
+          <A11yRow label={t.fontSize}       value={[t.values.normal, t.values.large, t.values.xlarge][fontSize]} active={fontSize > 0}           onClick={() => setFontSize(((fontSize + 1) % 3) as 0|1|2)} />
+          <A11yRow label={t.contrast}       value={{ normal: t.values.normal, high: t.values.high, inverted: t.values.inverted }[contrast]}       active={contrast !== "normal"}  onClick={nextContrast} />
+          <A11yRow label={t.highlightLinks} value={highlightLinks ? t.values.on : t.values.off}   active={highlightLinks}   onClick={toggleHighlight} />
+          <A11yRow label={t.underlineLinks} value={underlineLinks ? t.values.on : t.values.off}   active={underlineLinks}   onClick={toggleUnderline} />
+          <A11yRow label={t.bigCursor}      value={bigCursor      ? t.values.on : t.values.off}   active={bigCursor}        onClick={toggleBigCursor} />
+          <A11yRow label={t.stopAnimations} value={stopAnimations ? t.values.on : t.values.off}   active={stopAnimations}   onClick={toggleAnimations} />
+          <A11yRow label={t.readableFont}   value={readableFont   ? t.values.on : t.values.off}   active={readableFont}     onClick={toggleReadableFont} />
+          <A11yRow label={t.lineHeight}     value={[t.values.normal, t.values.x15, t.values.x2][lineHeight]}     active={lineHeight > 0}     onClick={() => setLineHeight(((lineHeight + 1) % 3) as 0|1|2)} />
+          <A11yRow label={t.letterSpacing}  value={[t.values.normal, t.values.p1, t.values.p3][letterSpacing]}  active={letterSpacing > 0}  onClick={() => setLetterSpacing(((letterSpacing + 1) % 3) as 0|1|2)} />
+          <A11yRow label={t.wordSpacing}    value={wordSpacing    ? t.values.on : t.values.off}   active={wordSpacing}      onClick={toggleWordSpacing} />
 
           <div className="pt-2 space-y-1 border-t border-[var(--color-border)]">
-            <button
-              onClick={() => setOpts(DEFAULT)}
-              className="w-full text-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] py-1"
-            >
+            <button onClick={reset} className="w-full text-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] py-1">
               {t.reset}
             </button>
-            <a
-              href={statementUrl}
-              className="block text-center text-sm text-[var(--color-primary)] hover:underline py-1"
-            >
+            <a href={statementUrl} className="block text-center text-sm text-[var(--color-primary)] hover:underline py-1">
               {t.statement}
             </a>
           </div>

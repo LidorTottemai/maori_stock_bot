@@ -3,7 +3,7 @@
 > **מטרה:** ספריית רכיבים משותפת שכל אתר שנבנה מייבא ממנה.
 > **Package:** `@tottemai/ui`
 > **Repo:** `github:LidorTottemai/tottemai-ui#main`
-> **דוקומנטציה:** `docs/website-monster/component-library/` (107 קבצי Obsidian)
+> **דוקומנטציה:** `docs/website-monster/component-library/` (109 קבצי Obsidian)
 > **עלות:** ~4 שעות פיתוח ראשוני
 > **תלויות:** שלב זה הוא הבסיס לכל השאר.
 
@@ -49,7 +49,7 @@ content: [
 
 ---
 
-## מבנה הספרייה — 107 רכיבים
+## מבנה הספרייה — 109 רכיבים
 
 ```
 tottemai-ui/
@@ -181,11 +181,13 @@ tottemai-ui/
 │   │   ├── useDebounce.ts       generic debounce
 │   │   └── useLocalStorage.ts   useState + localStorage + cross-tab sync
 │   │
-│   └── a11y/                 ♿ נגישות (3 רכיבים + CSS)
+│   └── a11y/                 ♿ נגישות (5 רכיבים/hooks + CSS)
 │       ├── AccessibilityWidget.tsx  כפתור צף + פאנל 10 כלים, i18n he/en
+│       ├── A11yProvider.tsx         מאזין לstore → מפעיל CSS vars + filter + classes
 │       ├── SkipLink.tsx             דלג לתוכן ראשי — sr-only → focus:visible
 │       ├── AccessibilityStatement.tsx דף הצהרת נגישות — IS 5568 / WCAG 2.0 AA
-│       ├── a11y.css                 data-attribute overrides (גופן/ניגודיות/אנימציות)
+│       ├── useA11yStore.ts          Zustand store + persist → localStorage
+│       ├── a11y.css                 CSS classes + variables (אנימציות, קישורים, spacing)
 │       └── index.ts
 │
 └── README.md
@@ -243,9 +245,10 @@ tottemai-ui/
 
 ```tsx
 // app/[locale]/layout.tsx
-import { SkipLink, AccessibilityWidget } from "@tottemai/ui"
+import { A11yProvider, SkipLink, AccessibilityWidget } from "@tottemai/ui"
 
-<SkipLink locale={locale} />           {/* ראשון בDOM */}
+<A11yProvider />                        {/* מאזין לZustand store → DOM */}
+<SkipLink locale={locale} />           {/* ראשון בDOM הנראה */}
 <main id="main-content">{children}</main>
 <AccessibilityWidget                    /* אחרון בDOM */
   locale={locale}
@@ -255,6 +258,8 @@ import { SkipLink, AccessibilityWidget } from "@tottemai/ui"
   statementUrl={`/${locale}/accessibility-statement`}
 />
 ```
+
+**Flow:** Widget כותב ל-Zustand → `useA11yStore` → A11yProvider מגיב → CSS variables / filter / classes על `<html>` → העיצוב כולו מגיב.
 
 ---
 
