@@ -4,6 +4,16 @@
 > **קבצים:** `app/services/site_archaeologist.py` · `app/services/site_generator.py`
 > **תנאי קדם:** [[03.5 - Phase 3.5 - Inspiration Crawler]] · [[04.1]] · [[04.2]] · [[04.3]]
 
+## תיעוד מפורט — services/
+
+| קובץ | תיאור |
+|------|-------|
+| [[services/00 - Services Overview]] | Flow diagram מלא, data structures, timing |
+| [[services/site_archaeologist]] | קוד Playwright מלא — `SiteData`, כל הפונקציות |
+| [[services/site_generator]] | spec שדרוג מגרסה 1.0 → 2.0 |
+| [[services/CLAUDE_MD_TEMPLATE]] | **הטמפלייט המלא** — מה שClaude Code מקבל בפועל |
+| [[services/rebuilder]] | orchestrator מעודכן עם archaeology + quality loop |
+
 ---
 
 ## הרעיון המרכזי
