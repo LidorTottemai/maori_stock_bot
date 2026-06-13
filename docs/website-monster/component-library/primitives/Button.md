@@ -1,57 +1,74 @@
 # Button
 
 > **קטגוריה:** primitives
-> **תלויות:** class-variance-authority, @radix-ui/react-slot, clsx
+> **תלויות:** class-variance-authority, @radix-ui/react-slot
 > **Storybook:** src/stories/Button.stories.tsx
 > **קוד:** src/primitives/Button.tsx
 > **עלות בנייה:** ~20 דקות
 
 ## מה זה
-כפתור רב-שימושי עם variants מרובים, גדלים, loading state ותמיכה ב-asChild pattern של Radix.
+כפתור ראשוני עם תמיכה מלאה ב-variants, גדלים, מצב loading, ו-asChild מ-Radix Slot. בסיס לכל פעולות המשתמש ב-UI. כל הצבעים מגיעים מ-CSS variables בלבד, ללא hexcode קשיח אחד.
 
 ## Variants / Stories
 | Story | תיאור |
 |-------|-------|
-| Primary | כפתור ראשי עם צבע primary |
-| Secondary | כפתור משני |
-| Ghost | כפתור שקוף ללא border |
-| Outline | כפתור עם border בלבד |
-| Destructive | כפתור לפעולות הרסניות (אדום) |
-| Small | גודל sm |
-| Medium | גודל md (ברירת מחדל) |
-| Large | גודל lg |
-| Loading | כפתור עם spinner ו-disabled אוטומטי |
-| AsChild | עוטף אלמנט אחר (לדוגמה link) |
-| Disabled | מצב disabled |
+| Primary | כפתור ראשי עם רקע var(--color-primary) |
+| Secondary | כפתור משני עם רקע var(--color-secondary) |
+| Ghost | כפתור שקוף, background רק ב-hover |
+| Outline | כפתור עם border בלבד, ללא fill |
+| Destructive | כפתור לפעולות מסוכנות (מחיקה, ביטול) |
+| Small | size="sm" — גובה 1.75rem |
+| Medium | size="md" — גובה 2.25rem (ברירת מחדל) |
+| Large | size="lg" — גובה 2.75rem |
+| Loading | isLoading={true} — spinner + disabled אוטומטי |
+| AsChild | asChild={true} עם `<a>` לניווט ללא button wrapper |
+| Disabled | disabled={true} — opacity 50% |
+| WithIcon | כפתור עם אייקון בצד, RTL-aware |
 
 ## Props API
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| variant | "primary" \| "secondary" \| "ghost" \| "outline" \| "destructive" | "primary" | סגנון הכפתור |
-| size | "sm" \| "md" \| "lg" | "md" | גודל הכפתור |
-| loading | boolean | false | מציג spinner ומשבית את הכפתור |
-| asChild | boolean | false | מפעיל Radix Slot pattern |
-| disabled | boolean | false | השבתת הכפתור |
-| className | string | — | CSS classes נוספים |
-| children | React.ReactNode | — | תוכן הכפתור |
+| variant | `"primary" \| "secondary" \| "ghost" \| "outline" \| "destructive"` | `"primary"` | סגנון ויזואלי של הכפתור |
+| size | `"sm" \| "md" \| "lg"` | `"md"` | גודל הכפתור (padding + font) |
+| isLoading | `boolean` | `false` | מציג spinner, מגדיר aria-busy, ומשבית קליקים |
+| loadingLabel | `string` | `"טוען..."` | aria-label קריא בזמן loading לנגישות |
+| asChild | `boolean` | `false` | מעביר את כל ה-props לילד הישיר (Radix Slot pattern) |
+| disabled | `boolean` | `false` | משבית לחיצה, opacity 50% |
+| className | `string` | `undefined` | class נוסף שמצורף לסוף הרשימה |
+| children | `React.ReactNode` | — | תוכן הכפתור |
+| onClick | `React.MouseEventHandler<HTMLButtonElement>` | `undefined` | handler לאירוע לחיצה |
 
 ## שימוש בסיסי
 ```tsx
 import { Button } from "@tottemai/ui"
 
-// Primary
-<Button variant="primary" size="md">לחץ כאן</Button>
-
-// Loading
-<Button variant="primary" loading>שומר...</Button>
-
-// Destructive
-<Button variant="destructive">מחק</Button>
-
-// AsChild — renders as <a> tag
-<Button asChild variant="ghost">
-  <a href="/about">אודות</a>
+// Primary button
+<Button variant="primary" size="md" onClick={() => console.log("clicked")}>
+  שמור שינויים
 </Button>
+
+// Loading state
+<Button variant="primary" isLoading loadingLabel="שומר נתונים...">
+  שמור שינויים
+</Button>
+
+// AsChild — renders as <a>, zero button DOM
+<Button asChild variant="ghost">
+  <a href="/dashboard">לדשבורד</a>
+</Button>
+
+// Destructive with small size
+<Button variant="destructive" size="sm">
+  מחק חשבון
+</Button>
+
+// RTL layout with icon (icon flips position via dir="rtl")
+<div dir="rtl">
+  <Button variant="outline">
+    <svg width="16" height="16" aria-hidden="true"><path d="M5 12l7-7" stroke="currentColor" strokeWidth="2"/></svg>
+    חזור
+  </Button>
+</div>
 ```
 
 ## קוד מלא
@@ -61,143 +78,249 @@ import { Button } from "@tottemai/ui"
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { clsx } from "clsx"
 
-const buttonVariants = cva(
-  [
-    "inline-flex items-center justify-center gap-2",
-    "font-medium rounded-md",
-    "border border-transparent",
-    "transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-    "disabled:pointer-events-none disabled:opacity-50",
-    "@media (prefers-reduced-motion: reduce) { transition: none }",
-  ].join(" "),
-  {
-    variants: {
-      variant: {
-        primary: [
-          "bg-[var(--color-primary)]",
-          "text-[var(--color-primary-fg)]",
-          "hover:opacity-90",
-          "focus-visible:ring-[var(--color-primary)]",
-        ].join(" "),
-        secondary: [
-          "bg-[var(--color-secondary)]",
-          "text-[var(--color-secondary-fg)]",
-          "hover:opacity-85",
-          "focus-visible:ring-[var(--color-secondary)]",
-        ].join(" "),
-        ghost: [
-          "bg-transparent",
-          "text-[var(--color-primary)]",
-          "hover:bg-[var(--color-muted)]",
-          "hover:text-[var(--color-muted-fg)]",
-          "focus-visible:ring-[var(--color-primary)]",
-        ].join(" "),
-        outline: [
-          "bg-transparent",
-          "border-[var(--color-border)]",
-          "text-[var(--color-primary)]",
-          "hover:bg-[var(--color-muted)]",
-          "focus-visible:ring-[var(--color-primary)]",
-        ].join(" "),
-        destructive: [
-          "bg-[var(--color-destructive)]",
-          "text-[var(--color-destructive-fg)]",
-          "hover:opacity-90",
-          "focus-visible:ring-[var(--color-destructive)]",
-        ].join(" "),
-      },
-      size: {
-        sm: "h-8 px-3 text-sm",
-        md: "h-10 px-4 text-base",
-        lg: "h-12 px-6 text-lg",
-      },
-    },
-    defaultVariants: {
-      variant: "primary",
-      size: "md",
-    },
+// ─── CSS Variables Reference ──────────────────────────────────────────────────
+// --color-primary              background of primary button
+// --color-primary-foreground   text on primary button
+// --color-secondary            background of secondary button
+// --color-secondary-foreground text on secondary button
+// --color-destructive          background of destructive button
+// --color-destructive-foreground text on destructive button
+// --color-border               border color for outline variant
+// --color-foreground           default text color
+// --color-surface-hover        hover bg for ghost/outline variants
+// --color-focus-ring           focus ring color (falls back to primary)
+// --radius-md                  button border-radius (default 0.375rem)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Injected styles (scoped, injected once) ──────────────────────────────────
+const BTN_STYLE_ID = "__tottemai_btn__"
+
+const buttonCSS = `
+  .tm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border-radius: var(--radius-md, 0.375rem);
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 150ms ease, border-color 150ms ease,
+                color 150ms ease, opacity 150ms ease, box-shadow 150ms ease;
+    white-space: nowrap;
+    user-select: none;
+    position: relative;
+    outline: none;
+    line-height: 1;
+    font-family: inherit;
   }
-)
 
-const LoadingSpinner = () => (
-  <svg
-    aria-hidden="true"
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{
-      animation: "button-spin 0.75s linear infinite",
-    }}
-  >
-    <style>{`
-      @keyframes button-spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .button-spinner { animation: none; opacity: 0.6; }
-      }
-    `}</style>
-    <circle
-      cx="8"
-      cy="8"
-      r="6"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeDasharray="28"
-      strokeDashoffset="10"
-      opacity="0.4"
-    />
-    <path
-      d="M8 2a6 6 0 0 1 6 6"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
-)
+  .tm-btn:focus-visible {
+    box-shadow: 0 0 0 3px var(--color-focus-ring, var(--color-primary));
+  }
 
+  .tm-btn:disabled,
+  .tm-btn[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* ── Sizes ── */
+  .tm-btn--sm { padding: 0.25rem 0.75rem;  font-size: 0.75rem;  min-height: 1.75rem; }
+  .tm-btn--md { padding: 0.5rem  1.25rem;  font-size: 0.875rem; min-height: 2.25rem; }
+  .tm-btn--lg { padding: 0.75rem 1.75rem;  font-size: 1rem;     min-height: 2.75rem; }
+
+  /* ── Variants ── */
+  .tm-btn--primary {
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    border-color: var(--color-primary);
+  }
+  .tm-btn--primary:hover:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(0.9);
+  }
+  .tm-btn--primary:active:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(0.85);
+  }
+
+  .tm-btn--secondary {
+    background: var(--color-secondary);
+    color: var(--color-secondary-foreground);
+    border-color: var(--color-secondary);
+  }
+  .tm-btn--secondary:hover:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(0.93);
+  }
+  .tm-btn--secondary:active:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(0.88);
+  }
+
+  .tm-btn--destructive {
+    background: var(--color-destructive);
+    color: var(--color-destructive-foreground);
+    border-color: var(--color-destructive);
+  }
+  .tm-btn--destructive:hover:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(0.9);
+  }
+
+  .tm-btn--outline {
+    background: transparent;
+    color: var(--color-foreground);
+    border-color: var(--color-border);
+  }
+  .tm-btn--outline:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  }
+
+  .tm-btn--ghost {
+    background: transparent;
+    color: var(--color-foreground);
+    border-color: transparent;
+  }
+  .tm-btn--ghost:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-surface-hover, rgba(0, 0, 0, 0.06));
+  }
+
+  /* ── Spinner ── */
+  .tm-btn__spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: tm-btn-spin 0.65s linear infinite;
+  }
+
+  @keyframes tm-btn-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    .tm-btn { transition: none; }
+    .tm-btn__spinner { animation: none; opacity: 0.7; }
+  }
+
+  /* ── RTL icon order ── */
+  [dir="rtl"] .tm-btn svg:first-child  { order: 1; }
+  [dir="rtl"] .tm-btn svg:last-child   { order: -1; }
+`
+
+function injectButtonStyles(): void {
+  if (typeof document === "undefined") return
+  if (document.getElementById(BTN_STYLE_ID)) return
+  const tag = document.createElement("style")
+  tag.id = BTN_STYLE_ID
+  tag.textContent = buttonCSS
+  document.head.appendChild(tag)
+}
+
+// ─── CVA class map ────────────────────────────────────────────────────────────
+const buttonVariants = cva("tm-btn", {
+  variants: {
+    variant: {
+      primary:     "tm-btn--primary",
+      secondary:   "tm-btn--secondary",
+      ghost:       "tm-btn--ghost",
+      outline:     "tm-btn--outline",
+      destructive: "tm-btn--destructive",
+    },
+    size: {
+      sm: "tm-btn--sm",
+      md: "tm-btn--md",
+      lg: "tm-btn--lg",
+    },
+  },
+  defaultVariants: {
+    variant: "primary",
+    size: "md",
+  },
+})
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
-  loading?: boolean
+  /** Renders the child element instead of a <button> (Radix Slot) */
   asChild?: boolean
+  /** Shows an animated spinner and disables interaction */
+  isLoading?: boolean
+  /** Screen-reader label announced during loading (default: "טוען...") */
+  loadingLabel?: string
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
       className,
       variant,
       size,
-      loading = false,
       asChild = false,
+      isLoading = false,
+      loadingLabel = "טוען...",
       disabled,
       children,
       ...props
     },
     ref
   ) => {
+    // Inject global keyframes + base styles once per page
+    React.useLayoutEffect(injectButtonStyles, [])
+
     const Comp = asChild ? Slot : "button"
-    const isDisabled = disabled || loading
+    const isDisabled = disabled || isLoading
+
+    const classes = [buttonVariants({ variant, size }), className]
+      .filter(Boolean)
+      .join(" ")
 
     return (
       <Comp
         ref={ref}
-        className={clsx(buttonVariants({ variant, size }), className)}
+        className={classes}
         disabled={isDisabled}
-        aria-disabled={isDisabled}
-        aria-busy={loading}
+        aria-disabled={isDisabled || undefined}
+        aria-busy={isLoading || undefined}
         {...props}
       >
-        {loading && <LoadingSpinner />}
-        {children}
+        {isLoading && (
+          <span
+            className="tm-btn__spinner"
+            aria-hidden="true"
+            role="presentation"
+          />
+        )}
+        {isLoading ? (
+          <>
+            {/* visually hidden label for screen readers */}
+            <span
+              style={{
+                position: "absolute",
+                width: "1px",
+                height: "1px",
+                padding: 0,
+                margin: "-1px",
+                overflow: "hidden",
+                clip: "rect(0,0,0,0)",
+                whiteSpace: "nowrap",
+                border: 0,
+              }}
+            >
+              {loadingLabel}
+            </span>
+            {/* visually show the original text, aria-hidden because sr-only above */}
+            <span aria-hidden="true">{children}</span>
+          </>
+        ) : (
+          children
+        )}
       </Comp>
     )
   }
@@ -212,7 +335,11 @@ export { Button, buttonVariants }
 ```css
 /* אין צבעים קשיחים */
 background: var(--color-primary);
-color: var(--color-text);
+color: var(--color-primary-foreground);
+border-color: var(--color-border);
+border-radius: var(--radius-md, 0.375rem);
+background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+box-shadow: 0 0 0 3px var(--color-focus-ring, var(--color-primary));
 ```
 
 ## בדיקות סיום

@@ -7,7 +7,7 @@
 > **עלות בנייה:** ~20 דקות
 
 ## מה זה
-שדה קלט טקסט בסיסי עם תמיכה מלאה ב-icons משמאל/ימין, מצב שגיאה עם הודעה, disabled, סוגי input שונים (כולל password עם toggle חשיפה), ו-RTL מלא. משתמשת ב-React.forwardRef לגישה ישירה ל-DOM element.
+שדה קלט טקסט בסיסי עם תמיכה מלאה ב-icons משמאל/ימין, מצב שגיאה עם הודעה, disabled, סוגי input שונים (כולל password עם toggle חשיפה), ו-RTL מלא. משתמש ב-React.forwardRef לגישה ישירה ל-DOM element. כל המידות, צבעים ורדיוסים מגיעים דרך CSS variables בלבד.
 
 ## Variants / Stories
 | Story | תיאור |
@@ -37,6 +37,10 @@
 | size | `"sm" \| "md" \| "lg"` | `"md"` | גודל הקומפוננטה |
 | wrapperClassName | `string` | `undefined` | class נוסף לעטיפה החיצונית |
 | className | `string` | `undefined` | class נוסף לאלמנט ה-input עצמו |
+| id | `string` | `undefined` | id לקישור עם label |
+| name | `string` | `undefined` | שם השדה בטפסים |
+| required | `boolean` | `false` | האם שדה חובה |
+| autoComplete | `string` | `undefined` | autocomplete hint לדפדפן |
 
 ## שימוש בסיסי
 ```tsx
@@ -106,7 +110,7 @@ const INPUT_PADDING_INLINE: Record<InputSize, string> = {
   lg: "16px",
 }
 
-// icon slot width = padding + icon size
+// icon slot width = inset + icon size
 const ICON_SLOT: Record<InputSize, string> = {
   sm: "30px",
   md: "36px",
@@ -136,6 +140,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       onBlur,
       style,
       id: idProp,
+      "aria-describedby": ariaDescribedBy,
       ...props
     },
     ref
@@ -152,8 +157,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const hasError = Boolean(error)
     const errorMessage = typeof error === "string" ? error : undefined
 
-    // Determine which icon slots are occupied
-    // Password toggle replaces the iconRight slot
     const showIconLeft = Boolean(iconLeft)
     const showIconRight = Boolean(iconRight) && !isPassword
     const showPasswordToggle = isPassword
@@ -172,6 +175,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const focusShadow = hasError
       ? "0 0 0 3px var(--color-error-ring, color-mix(in srgb, var(--color-input-border-error) 25%, transparent))"
       : "0 0 0 3px var(--color-focus-ring, color-mix(in srgb, var(--color-ring) 25%, transparent))"
+
+    const describedBy = [ariaDescribedBy, errorMessage ? errorId : ""]
+      .filter(Boolean)
+      .join(" ") || undefined
 
     const inputStyle: React.CSSProperties = {
       width: "100%",
@@ -220,10 +227,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div className={wrapperClassName} style={{ width: "100%" }}>
-        {/* Input + Icons wrapper */}
         <div style={{ position: "relative", display: "inline-flex", width: "100%" }}>
 
-          {/* Icon Left (inline-start) */}
+          {/* Icon Left (inline-start) — visually flips in RTL via logical CSS */}
           {showIconLeft && (
             <span
               aria-hidden="true"
@@ -236,14 +242,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </span>
           )}
 
-          {/* The actual input element */}
           <input
             ref={ref}
             id={inputId}
             type={resolvedType}
             disabled={disabled}
             aria-invalid={hasError ? "true" : undefined}
-            aria-describedby={errorMessage ? errorId : undefined}
+            aria-describedby={describedBy}
             dir="auto"
             className={className}
             style={inputStyle}
@@ -280,37 +285,24 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 borderRadius: "var(--radius-sm, 3px)",
                 pointerEvents: disabled ? "none" : "auto",
               }}
-              onFocus={(e) => e.stopPropagation()}
             >
               {showPassword ? (
-                /* Eye-off icon */
                 <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+                  width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  aria-hidden="true" focusable="false"
                 >
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                   <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
                   <line x1="1" y1="1" x2="23" y2="23" />
                 </svg>
               ) : (
-                /* Eye icon */
                 <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+                  width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  aria-hidden="true" focusable="false"
                 >
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                   <circle cx="12" cy="12" r="3" />
@@ -319,7 +311,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </button>
           )}
 
-          {/* Icon Right (inline-end) — not shown when password toggle is active */}
+          {/* Icon Right (inline-end) */}
           {showIconRight && (
             <span
               aria-hidden="true"
@@ -333,7 +325,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
 
-        {/* Error message */}
+        {/* Error message — announced via role="alert" */}
         {errorMessage && (
           <span
             id={errorId}
