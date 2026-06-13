@@ -4,7 +4,7 @@
 > **Repo:** `github:LidorTottemai/tottemai-graphs#main`
 > **מנוע:** Recharts v3 (ראשי) + visx primitives (מיוחדים) + custom SVG
 > **תלויות עמית:** `@tottemai/ui` (CSS variables, CountUp, cn)
-> **סה"כ רכיבים:** 22
+> **סה"כ רכיבים:** 23
 
 ---
 
@@ -33,7 +33,9 @@
     "@tottemai/ui": "github:LidorTottemai/tottemai-ui#main",
     "recharts": "^3",
     "@visx/heatmap": "^3",
-    "@visx/scale": "^3"
+    "@visx/scale": "^3",
+    "react-simple-maps": "^3",
+    "d3-scale": "^4"
   }
 }
 ```
@@ -72,12 +74,13 @@ tottemai-graphs/
 │   │   ├── ProgressRing.tsx   עיגול התקדמות SVG
 │   │   └── ActivityFeed.tsx   timeline של פעולות
 │   │
-│   ├── special/               ✨ 5 גרפים מתקדמים
+│   ├── special/               ✨ 6 גרפים מתקדמים
 │   │   ├── GaugeChart.tsx     מד מהירות SVG
 │   │   ├── HeatMap.tsx        ריבועי צבע (visx)
 │   │   ├── TreeMap.tsx        היררכיה (recharts)
 │   │   ├── FunnelChart.tsx    funnel מכירות (recharts)
-│   │   └── CalendarHeatmap.tsx GitHub-style contributions
+│   │   ├── CalendarHeatmap.tsx GitHub-style contributions
+│   │   └── BubbleMap.tsx      מפה גאוגרפית + עיגולים (react-simple-maps)
 │   │
 │   └── hooks/                 🪝 3 hooks
 │       ├── useChartTheme.ts   CSS vars → chartTheme object
@@ -146,6 +149,7 @@ export function useChartTheme() {
 | [[special/TreeMap]] | היררכיה בריבועים | recharts |
 | [[special/FunnelChart]] | funnel מכירות | recharts |
 | [[special/CalendarHeatmap]] | contribution calendar | custom SVG |
+| [[special/BubbleMap]] | מפה גאוגרפית + עיגולי נתונים | react-simple-maps, d3-scale |
 
 ### hooks/
 | קובץ | תיאור |
@@ -189,6 +193,7 @@ import { LineChart, StatsCard, DonutChart } from "@tottemai/graphs"
 - [ ] Dark/Light mode: הגרפים נראים טוב בשני המצבים
 - [ ] StatsCard עם CountUp + sparkline פועל
 - [ ] CalendarHeatmap מציג נתונים שנתיים
+- [ ] BubbleMap: עיגולים על מפת עולם + ישראל, tooltip בhover
 - [ ] מיוצא ב-src/index.ts
 
 ← [[../00 - Vision & Architecture]]
