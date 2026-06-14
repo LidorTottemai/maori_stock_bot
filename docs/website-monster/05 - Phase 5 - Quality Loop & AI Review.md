@@ -2,6 +2,7 @@
 
 > **מטרה:** אף אתר לא יצא מהמנגנון עם ציון פחות מ-8/10.
 > **קובץ:** `app/services/quality_loop.py`
+> **תיעוד מפורט:** [[services/quality_loop]] — קוד מלא, STRUCTURAL_RULES, Haiku scoring, build_fix_prompt, retry_with_fix
 
 ---
 
