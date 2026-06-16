@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { Input, Spinner } from "@tottemai/ui"
 import type { Product } from "../types/shop"
 import { useProductList } from "../hooks/useProductList"
 import { ProductCard } from "./ProductCard"
@@ -36,21 +37,23 @@ export function ProductCatalog({ category_id, tag }: Props) {
     }
   }
 
-  if (loading) return <div className="catalog-loading">טוען מוצרים...</div>
-  if (error) return <div className="catalog-error">שגיאה בטעינת מוצרים</div>
-
   return (
     <div className="catalog">
-      <input
-        className="catalog__search"
+      <Input
         type="search"
         placeholder="חיפוש מוצרים..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {products.length === 0 ? (
-        <div className="catalog-empty">לא נמצאו מוצרים</div>
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+          <Spinner size="lg" />
+        </div>
+      ) : error ? (
+        <p style={{ color: "var(--ui-danger)", textAlign: "center" }}>שגיאה בטעינת מוצרים</p>
+      ) : products.length === 0 ? (
+        <p style={{ color: "var(--ui-text-muted)", textAlign: "center" }}>לא נמצאו מוצרים</p>
       ) : (
         <div className="catalog__grid">
           {products.map((p) => (

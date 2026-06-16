@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Badge, Button } from "@tottemai/ui"
 import type { Product } from "../types/shop"
 
 interface Props {
@@ -14,7 +15,7 @@ export function ProductCard({ product, onSelect }: Props) {
 
   return (
     <div
-      style={{ opacity: outOfStock ? 0.6 : 1, cursor: outOfStock ? "default" : "pointer" }}
+      style={{ opacity: outOfStock ? 0.6 : 1 }}
       onClick={() => !outOfStock && onSelect(product)}
       role="button"
       tabIndex={outOfStock ? -1 : 0}
@@ -41,10 +42,10 @@ export function ProductCard({ product, onSelect }: Props) {
             </span>
           )}
         </div>
-        {outOfStock && <span className="product-card__badge--oos">אזל מהמלאי</span>}
-        {hasVariants && !outOfStock && (
-          <span className="product-card__badge--variants">בחר אפשרויות</span>
-        )}
+        <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.5rem" }}>
+          {outOfStock && <Badge variant="error">אזל מהמלאי</Badge>}
+          {hasVariants && !outOfStock && <Badge variant="default">בחר אפשרויות</Badge>}
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { Button, Drawer } from "@tottemai/ui"
 import type { Product, ProductVariantGroup, ProductVariantOption } from "../types/shop"
 import { useCart } from "../context/CartContext"
 import { computeItemUnitPrice } from "../utils/price"
@@ -40,6 +41,7 @@ export function ProductVariantDrawer({ product, onClose }: Props) {
   const [skuSelections, setSkuSelections] = useState<Record<string, string>>({})
   const [addonSelections, setAddonSelections] = useState<Record<string, string | string[]>>({})
   const [quantity, setQuantity] = useState(1)
+  const [adding, setAdding] = useState(false)
 
   if (!product) return null
 
@@ -75,6 +77,7 @@ export function ProductVariantDrawer({ product, onClose }: Props) {
 
   function handleAddToCart() {
     if (!product || !allRequiredSelected) return
+    setAdding(true)
     addItem({
       product_id: product.id,
       product,
@@ -84,96 +87,94 @@ export function ProductVariantDrawer({ product, onClose }: Props) {
       quantity,
       unit_price: unitPrice,
     })
+    setAdding(false)
     onClose()
   }
 
   return (
-    <div className="drawer-overlay" onClick={onClose} role="dialog" aria-modal>
-      <div className="drawer" onClick={(e) => e.stopPropagation()}>
-        <button className="drawer__close" onClick={onClose} aria-label="סגור">
-          ✕
-        </button>
+    <Drawer open onClose={onClose} title={product.name}>
+      {product.image_urls[0] && (
+        <img
+          src={product.image_urls[0]}
+          alt={product.name}
+          style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: "var(--ui-radius)" }}
+        />
+      )}
 
-        {product.image_urls[0] && (
-          <img
-            src={product.image_urls[0]}
-            alt={product.name}
-            style={{ width: "100%", maxHeight: 240, objectFit: "cover" }}
-          />
-        )}
+      {product.description && (
+        <p style={{ color: "var(--ui-text-muted)", margin: 0 }}>{product.description}</p>
+      )}
 
-        <div className="drawer__body">
-          <h2>{product.name}</h2>
-          {product.description && <p>{product.description}</p>}
-          <p className="drawer__price">
-            {parseFloat(unitPrice).toFixed(2)} {product.currency}
+      <p style={{ fontWeight: 600, fontSize: "1.25rem", margin: 0 }}>
+        {parseFloat(unitPrice).toFixed(2)} {product.currency}
+      </p>
+
+      {stockGroups.map((group) => (
+        <div key={group.id}>
+          <p style={{ fontWeight: 500, marginBottom: "0.5rem" }}>
+            {group.name}
+            {group.selection_type === "single_required" && " *"}
           </p>
-
-          {stockGroups.map((group) => (
-            <div key={group.id} className="variant-group">
-              <p className="variant-group__label">
-                {group.name}
-                {group.selection_type === "single_required" && " *"}
-              </p>
-              <div className="variant-group__options">
-                {group.options.map((opt) => (
-                  <button
-                    key={opt.id}
-                    className={`variant-option${skuSelections[group.id] === opt.id ? " variant-option--selected" : ""}`}
-                    onClick={() => handleSkuSelect(group, opt)}
-                  >
-                    {opt.label}
-                    {parseFloat(opt.price_delta) !== 0 && (
-                      <span>
-                        {" "}
-                        ({parseFloat(opt.price_delta) > 0 ? "+" : ""}
-                        {parseFloat(opt.price_delta).toFixed(2)})
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {addonGroups.map((group) => (
-            <div key={group.id} className="variant-group">
-              <p className="variant-group__label">{group.name}</p>
-              <div className="variant-group__options">
-                {group.options.map((opt) => {
-                  const selected =
-                    group.selection_type === "multi_optional"
-                      ? ((addonSelections[group.id] as string[]) ?? []).includes(opt.id)
-                      : addonSelections[group.id] === opt.id
-                  return (
-                    <button
-                      key={opt.id}
-                      className={`variant-option${selected ? " variant-option--selected" : ""}`}
-                      onClick={() => handleAddonToggle(group, opt)}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-
-          <div className="quantity-row">
-            <button onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
-            <span>{quantity}</span>
-            <button onClick={() => setQuantity((q) => q + 1)}>+</button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {group.options.map((opt) => (
+              <Button
+                key={opt.id}
+                variant={skuSelections[group.id] === opt.id ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => handleSkuSelect(group, opt)}
+              >
+                {opt.label}
+                {parseFloat(opt.price_delta) !== 0 && (
+                  <span style={{ fontSize: "0.75rem", opacity: 0.8 }}>
+                    {" "}({parseFloat(opt.price_delta) > 0 ? "+" : ""}
+                    {parseFloat(opt.price_delta).toFixed(2)})
+                  </span>
+                )}
+              </Button>
+            ))}
           </div>
-
-          <button
-            className="btn-primary"
-            onClick={handleAddToCart}
-            disabled={!allRequiredSelected}
-          >
-            הוסף לעגלה
-          </button>
         </div>
+      ))}
+
+      {addonGroups.map((group) => (
+        <div key={group.id}>
+          <p style={{ fontWeight: 500, marginBottom: "0.5rem" }}>{group.name}</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {group.options.map((opt) => {
+              const selected =
+                group.selection_type === "multi_optional"
+                  ? ((addonSelections[group.id] as string[]) ?? []).includes(opt.id)
+                  : addonSelections[group.id] === opt.id
+              return (
+                <Button
+                  key={opt.id}
+                  variant={selected ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => handleAddonToggle(group, opt)}
+                >
+                  {opt.label}
+                </Button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <Button variant="ghost" size="sm" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</Button>
+        <span style={{ fontWeight: 600, minWidth: "1.5rem", textAlign: "center" }}>{quantity}</span>
+        <Button variant="ghost" size="sm" onClick={() => setQuantity((q) => q + 1)}>+</Button>
       </div>
-    </div>
+
+      <Button
+        variant="primary"
+        loading={adding}
+        disabled={!allRequiredSelected}
+        onClick={handleAddToCart}
+        style={{ width: "100%" }}
+      >
+        הוסף לעגלה
+      </Button>
+    </Drawer>
   )
 }

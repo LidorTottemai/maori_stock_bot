@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import { Badge, Spinner } from "@tottemai/ui"
 import type { OrderTracking as OrderTrackingType } from "../types/shop"
 import { fetchOrderTracking } from "../api/shopClient"
 
@@ -24,6 +25,18 @@ const STATUS_LABELS: Record<string, string> = {
   fulfilled: "סופק",
 }
 
+const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "error" | "info"> = {
+  completed: "success",
+  fulfilled: "success",
+  paid: "success",
+  cancelled: "error",
+  failed: "error",
+  refunded: "warning",
+  processing: "info",
+  shipped: "info",
+  ready: "info",
+}
+
 export function OrderTracking({ token }: Props) {
   const [data, setData] = useState<OrderTrackingType | null>(null)
   const [loading, setLoading] = useState(true)
@@ -32,57 +45,50 @@ export function OrderTracking({ token }: Props) {
   useEffect(() => {
     if (!token) return
     fetchOrderTracking(token)
-      .then((d) => {
-        setData(d)
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err?.message ?? "שגיאה בטעינת ההזמנה")
-        setLoading(false)
-      })
+      .then((d) => { setData(d); setLoading(false) })
+      .catch((err) => { setError(err?.message ?? "שגיאה בטעינת ההזמנה"); setLoading(false) })
   }, [token])
 
-  if (loading) return <div className="tracking-loading">טוען פרטי הזמנה...</div>
-  if (error) return <div className="tracking-error">{error}</div>
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+  if (error) return <p style={{ color: "var(--ui-danger)" }}>{error}</p>
   if (!data) return null
 
   return (
     <div className="order-tracking">
       <h2>הזמנה #{data.order_number}</h2>
 
-      <div className="tracking-statuses">
-        <div className="tracking-status">
-          <span className="tracking-status__label">סטטוס הזמנה</span>
-          <span className="tracking-status__value">{STATUS_LABELS[data.order_status] ?? data.order_status}</span>
-        </div>
-        <div className="tracking-status">
-          <span className="tracking-status__label">סטטוס תשלום</span>
-          <span className="tracking-status__value">{STATUS_LABELS[data.payment_status] ?? data.payment_status}</span>
-        </div>
-        <div className="tracking-status">
-          <span className="tracking-status__label">סטטוס אספקה</span>
-          <span className="tracking-status__value">{STATUS_LABELS[data.fulfillment_status] ?? data.fulfillment_status}</span>
-        </div>
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+        <Badge variant={STATUS_VARIANT[data.order_status] ?? "default"}>
+          {STATUS_LABELS[data.order_status] ?? data.order_status}
+        </Badge>
+        <Badge variant={STATUS_VARIANT[data.payment_status] ?? "default"}>
+          {STATUS_LABELS[data.payment_status] ?? data.payment_status}
+        </Badge>
+        <Badge variant={STATUS_VARIANT[data.fulfillment_status] ?? "default"}>
+          {STATUS_LABELS[data.fulfillment_status] ?? data.fulfillment_status}
+        </Badge>
       </div>
 
       {data.tracking_number && (
-        <p className="tracking-number">
-          מספר מעקב: <strong>{data.tracking_number}</strong>
-        </p>
+        <p>מספר מעקב: <strong>{data.tracking_number}</strong></p>
       )}
 
-      <div className="tracking-items">
-        <h3>פריטים</h3>
-        <ul>
-          {data.items.map((item, i) => (
-            <li key={i}>
-              {item.product_name} × {item.quantity} — {item.item_total} ₪
-            </li>
-          ))}
-        </ul>
-      </div>
+      <ul style={{ listStyle: "none", padding: 0, margin: "1rem 0", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+        {data.items.map((item, i) => (
+          <li key={i} style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>{item.product_name} × {item.quantity}</span>
+            <span>{item.item_total} ₪</span>
+          </li>
+        ))}
+      </ul>
 
-      <p className="tracking-date">
+      <p style={{ color: "var(--ui-text-muted)", fontSize: "0.875rem" }}>
         תאריך הזמנה: {new Date(data.created_at).toLocaleDateString("he-IL")}
       </p>
     </div>

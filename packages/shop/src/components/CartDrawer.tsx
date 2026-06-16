@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Button, Drawer } from "@tottemai/ui"
 import { useCart } from "../context/CartContext"
 
 interface Props {
@@ -12,81 +13,75 @@ interface Props {
 export function CartDrawer({ open, onClose, onCheckout }: Props) {
   const { items, updateQuantity, removeItem, itemCount, subtotal } = useCart()
 
-  if (!open) return null
-
   return (
-    <div className="drawer-overlay" onClick={onClose} role="dialog" aria-modal aria-label="עגלת קניות">
-      <div className="drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="drawer__header">
-          <h2>עגלת קניות ({itemCount})</h2>
-          <button className="drawer__close" onClick={onClose} aria-label="סגור">
-            ✕
-          </button>
-        </div>
+    <Drawer open={open} onClose={onClose} title={`עגלת קניות (${itemCount})`} aria-label="עגלת קניות">
+      {items.length === 0 ? (
+        <p style={{ color: "var(--ui-text-muted)", textAlign: "center" }}>העגלה ריקה</p>
+      ) : (
+        <>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {items.map((item) => (
+              <li
+                key={`${item.product_id}-${item.variant_sku_id ?? "base"}`}
+                style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
+              >
+                {item.product.image_urls[0] && (
+                  <img
+                    src={item.product.image_urls[0]}
+                    alt={item.product.name}
+                    style={{ width: 56, height: 56, objectFit: "cover", borderRadius: "var(--ui-radius-sm)", flexShrink: 0 }}
+                  />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {item.product.name}
+                  </p>
+                  <p style={{ margin: 0, color: "var(--ui-text-muted)", fontSize: "0.875rem" }}>
+                    {parseFloat(item.unit_price).toFixed(2)} {item.product.currency}
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => updateQuantity(item.product_id, item.variant_sku_id, item.quantity - 1)}
+                    aria-label="הפחת כמות"
+                  >
+                    −
+                  </Button>
+                  <span style={{ minWidth: "1.5rem", textAlign: "center" }}>{item.quantity}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => updateQuantity(item.product_id, item.variant_sku_id, item.quantity + 1)}
+                    aria-label="הוסף כמות"
+                  >
+                    +
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeItem(item.product_id, item.variant_sku_id)}
+                  aria-label="הסר מוצר"
+                  style={{ color: "var(--ui-danger)" }}
+                >
+                  ✕
+                </Button>
+              </li>
+            ))}
+          </ul>
 
-        <div className="drawer__body">
-          {items.length === 0 ? (
-            <p className="cart-empty">העגלה ריקה</p>
-          ) : (
-            <>
-              <ul className="cart-items">
-                {items.map((item) => (
-                  <li key={`${item.product_id}-${item.variant_sku_id ?? "base"}`} className="cart-item">
-                    {item.product.image_urls[0] && (
-                      <img
-                        src={item.product.image_urls[0]}
-                        alt={item.product.name}
-                        className="cart-item__img"
-                      />
-                    )}
-                    <div className="cart-item__info">
-                      <p className="cart-item__name">{item.product.name}</p>
-                      <p className="cart-item__price">
-                        {parseFloat(item.unit_price).toFixed(2)} {item.product.currency}
-                      </p>
-                    </div>
-                    <div className="cart-item__qty">
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.product_id, item.variant_sku_id, item.quantity - 1)
-                        }
-                        aria-label="הפחת כמות"
-                      >
-                        −
-                      </button>
-                      <span>{item.quantity}</span>
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.product_id, item.variant_sku_id, item.quantity + 1)
-                        }
-                        aria-label="הוסף כמות"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <button
-                      className="cart-item__remove"
-                      onClick={() => removeItem(item.product_id, item.variant_sku_id)}
-                      aria-label="הסר מוצר"
-                    >
-                      🗑
-                    </button>
-                  </li>
-                ))}
-              </ul>
+          <div style={{ borderTop: "1px solid var(--ui-border)", paddingTop: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "var(--ui-text-muted)" }}>סה"כ ביניים:</span>
+            <strong>{subtotal} ₪</strong>
+          </div>
 
-              <div className="cart-subtotal">
-                <span>סה"כ ביניים:</span>
-                <strong>{subtotal} ₪</strong>
-              </div>
-
-              <button className="btn-primary" onClick={onCheckout}>
-                לתשלום
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          <Button variant="primary" onClick={onCheckout} style={{ width: "100%" }}>
+            לתשלום
+          </Button>
+        </>
+      )}
+    </Drawer>
   )
 }
