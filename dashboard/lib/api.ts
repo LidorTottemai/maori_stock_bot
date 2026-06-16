@@ -134,6 +134,78 @@ export interface ShopProductCreate {
   sort_order?: number
 }
 
+export interface ShopCustomer {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  marketing_consent: boolean
+  notes: string | null
+  tags: string[]
+  address_default: Record<string, string> | null
+  created_at: string
+  updated_at: string
+  total_orders?: number
+  total_spent?: string
+}
+
+export interface ShopCoupon {
+  id: string
+  code: string
+  discount_type: "percent" | "fixed"
+  discount_value: string
+  min_order: string
+  max_discount: string | null
+  starts_at: string | null
+  expires_at: string | null
+  max_uses: number | null
+  per_customer_limit: number | null
+  is_active: boolean
+  applies_to_all_products: boolean
+}
+
+export interface ShopCouponCreate {
+  code: string
+  discount_type: "percent" | "fixed"
+  discount_value: number
+  min_order?: number
+  max_discount?: number | null
+  starts_at?: string | null
+  expires_at?: string | null
+  max_uses?: number | null
+  per_customer_limit?: number | null
+  applies_to_all_products?: boolean
+}
+
+export interface ShopAnalyticsSummary {
+  total_orders: number
+  paid_orders: number
+  revenue_net: string
+  aov: string
+  top_payment_mode: string | null
+}
+
+export interface ShopRevenuePoint {
+  date: string
+  revenue_net: string
+  order_count: number
+}
+
+export interface ShopTopProduct {
+  product_name: string
+  total_qty: number
+  total_revenue: string
+}
+
+export interface ShopStaff {
+  id: string
+  name: string
+  email: string
+  role: string
+  is_active: boolean
+  last_login: string | null
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function fetchJson<T>(path: string): Promise<T> {
@@ -259,4 +331,56 @@ export const api = {
 
   shopCreateProduct: (body: ShopProductCreate): Promise<ShopProduct> =>
     fetchMutation<ShopProduct>(`/api/v1/products/`, "POST", body),
+
+  // ── Customers ──────────────────────────────────────────────────────────────
+
+  shopCustomers: (params?: { search?: string }): Promise<ShopCustomer[]> => {
+    const qs = params?.search ? `?search=${encodeURIComponent(params.search)}` : ""
+    return fetchJson<ShopCustomer[]>(`/api/v1/customers/${qs}`)
+  },
+
+  shopCustomerOrders: (id: string): Promise<ShopOrder[]> =>
+    fetchJson<ShopOrder[]>(`/api/v1/customers/${id}/orders`),
+
+  shopUpdateCustomer: (id: string, body: Partial<ShopCustomer>): Promise<ShopCustomer> =>
+    fetchMutation<ShopCustomer>(`/api/v1/customers/${id}`, "PUT", body),
+
+  // ── Coupons ────────────────────────────────────────────────────────────────
+
+  shopCoupons: (): Promise<ShopCoupon[]> =>
+    fetchJson<ShopCoupon[]>(`/api/v1/coupons/`),
+
+  shopCreateCoupon: (body: ShopCouponCreate): Promise<ShopCoupon> =>
+    fetchMutation<ShopCoupon>(`/api/v1/coupons/`, "POST", body),
+
+  shopUpdateCoupon: (id: string, body: Partial<ShopCouponCreate>): Promise<ShopCoupon> =>
+    fetchMutation<ShopCoupon>(`/api/v1/coupons/${id}`, "PUT", body),
+
+  shopDeleteCoupon: (id: string): Promise<void> =>
+    fetchMutation<void>(`/api/v1/coupons/${id}`, "DELETE"),
+
+  // ── Analytics ──────────────────────────────────────────────────────────────
+
+  shopAnalyticsSummary: (): Promise<ShopAnalyticsSummary> =>
+    fetchJson<ShopAnalyticsSummary>(`/api/v1/shop-analytics/summary`),
+
+  shopAnalyticsRevenue: (days = 30): Promise<ShopRevenuePoint[]> =>
+    fetchJson<ShopRevenuePoint[]>(`/api/v1/shop-analytics/revenue?days=${days}`),
+
+  shopTopProducts: (): Promise<ShopTopProduct[]> =>
+    fetchJson<ShopTopProduct[]>(`/api/v1/shop-analytics/top-products`),
+
+  // ── Staff ──────────────────────────────────────────────────────────────────
+
+  shopStaff: (): Promise<ShopStaff[]> =>
+    fetchJson<ShopStaff[]>(`/api/v1/staff/`),
+
+  shopUpdateRole: (id: string, role: string): Promise<ShopStaff> =>
+    fetchMutation<ShopStaff>(`/api/v1/staff/${id}/role`, "PUT", { role }),
+
+  shopDisableStaff: (id: string): Promise<unknown> =>
+    fetchMutation<unknown>(`/api/v1/staff/${id}/disable`, "PUT"),
+
+  shopInviteStaff: (email: string, role: string): Promise<{ invitation_id: string; token: string; expires_at: string }> =>
+    fetchMutation(`/api/v1/staff/invite`, "POST", { email, role }),
 }

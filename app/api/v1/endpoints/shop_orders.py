@@ -1,9 +1,13 @@
 """Shop orders — public creation and admin management."""
+import asyncio
+import csv
+import io
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -17,6 +21,7 @@ from app.models.shop_product_variant import ProductVariantSku
 from app.models.shop_staff import StaffUser
 from app.services.inventory_service import reserve_items, release_active_reservations
 from app.services.refund_service import cancel_and_refund
+from app.services.shop_notifications import notify_new_order, notify_order_cancelled
 from app.shop.state_machine import validate_fulfillment_transition
 
 router = APIRouter(prefix="/shop-orders", tags=["shop-orders"])
@@ -213,6 +218,7 @@ def estimate_order(
 @router.post("/")
 def create_order(
     body: OrderCreate,
+    background_tasks: BackgroundTasks,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     place_id: str = Depends(get_public_place_id),
     session: Session = Depends(get_session),
@@ -306,6 +312,20 @@ def create_order(
 
     session.commit()
     session.refresh(order)
+
+    # Fire-and-forget Telegram notification
+    item_lines = [f"{i.product_name}×{i.quantity}" for i in order_items]
+    background_tasks.add_task(
+        notify_new_order,
+        order_number=order.order_number,
+        customer_name=order.customer_name,
+        customer_phone=order.customer_phone,
+        payment_mode=order.payment_mode,
+        order_type=order.order_type,
+        total=str(order.total),
+        item_lines=item_lines,
+    )
+
     return order.model_dump()
 
 
@@ -447,3 +467,40 @@ async def cancel_order(
             raise HTTPException(status_code=422, detail=str(exc))
 
     raise HTTPException(status_code=422, detail=f"Cannot cancel order with payment_status={order.payment_status}")
+
+
+@router.get("/admin/export.csv", dependencies=[Depends(require_roles("owner", "admin", "manager"))])
+def export_orders_csv(
+    order_status: str | None = Query(default=None),
+    payment_status: str | None = Query(default=None),
+    place_id: str = Depends(get_admin_place_id),
+    session: Session = Depends(get_session),
+) -> StreamingResponse:
+    stmt = select(ShopOrder).where(ShopOrder.place_id == place_id)
+    if order_status:
+        stmt = stmt.where(ShopOrder.order_status == order_status)
+    if payment_status:
+        stmt = stmt.where(ShopOrder.payment_status == payment_status)
+    stmt = stmt.order_by(ShopOrder.created_at.desc())
+    orders = session.exec(stmt).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "order_number", "customer_name", "customer_email", "customer_phone",
+        "order_type", "order_status", "payment_status", "fulfillment_status",
+        "total", "created_at",
+    ])
+    for o in orders:
+        writer.writerow([
+            o.order_number, o.customer_name, o.customer_email, o.customer_phone,
+            o.order_type, o.order_status, o.payment_status, o.fulfillment_status,
+            str(o.total), o.created_at.strftime("%Y-%m-%d %H:%M"),
+        ])
+
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=orders.csv"},
+    )

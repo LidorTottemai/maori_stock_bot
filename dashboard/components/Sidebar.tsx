@@ -12,6 +12,10 @@ import {
   LogOut,
   PackageSearch,
   ShoppingBag,
+  Users,
+  Tag,
+  BarChart3,
+  UserCog,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -24,8 +28,12 @@ const NAV_LINKS = [
 ]
 
 const SHOP_LINKS = [
-  { href: "/shop/orders", label: "הזמנות", icon: PackageSearch },
-  { href: "/shop/products", label: "מוצרים", icon: ShoppingBag },
+  { href: "/shop/orders",    label: "הזמנות",  icon: PackageSearch },
+  { href: "/shop/products",  label: "מוצרים",  icon: ShoppingBag },
+  { href: "/shop/customers", label: "לקוחות",  icon: Users },
+  { href: "/shop/coupons",   label: "קופונים", icon: Tag },
+  { href: "/shop/analytics", label: "אנליטיקה", icon: BarChart3 },
+  { href: "/shop/staff",     label: "צוות",    icon: UserCog },
 ]
 
 export default function Sidebar() {
