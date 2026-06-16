@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tottemai/ui": "*",
+    "@tottemai/ui": "workspace:*",
     "zod": "^3.23.0",
     "zustand": "^5.0.0"
   },

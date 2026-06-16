@@ -1,0 +1,26 @@
+/* 1. @tottemai/ui design tokens + component styles — MUST be first */
+@import "@tottemai/ui/styles";
+
+/* 2. Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 3. Brand colour overrides — violet/purple palette */
+:root {
+  --ui-primary:       #7c3aed;
+  --ui-primary-hover: #6d28d9;
+  --ui-surface-2:     #f5f3ff;
+}
+
+/* 4. Base */
+html,
+body {
+  background: #ffffff;
+  color: #111827;
+}
+
+body {
+  font-family: "Rubik", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
