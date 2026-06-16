@@ -10,17 +10,29 @@ interface Props {
   onClose: () => void
 }
 
-function buildVariantSkuId(
+function resolveVariantSku(
   product: Product,
   sku_selections: Record<string, string>,
-): string | null {
+): { sku_id: string | null; unit_price: string } {
   const stockGroups = product.variant_groups?.filter((g) => g.affects_stock) ?? []
-  if (stockGroups.length === 0) return null
-  const parts = stockGroups
-    .map((g) => sku_selections[g.id] ?? "")
-    .sort()
-    .join("_")
-  return parts || null
+  const selectedOptionIds = new Set(
+    stockGroups.map((g) => sku_selections[g.id]).filter(Boolean),
+  )
+  const basePrice = computeItemUnitPrice(product, sku_selections)
+
+  if (selectedOptionIds.size === 0 || !product.variant_skus?.length) {
+    return { sku_id: null, unit_price: basePrice }
+  }
+
+  const match = product.variant_skus.find(
+    (s) =>
+      s.option_ids.length === selectedOptionIds.size &&
+      s.option_ids.every((id) => selectedOptionIds.has(id)),
+  )
+  if (!match) return { sku_id: null, unit_price: basePrice }
+
+  const price = match.price_override ?? basePrice
+  return { sku_id: match.id, unit_price: String(price) }
 }
 
 export function ProductVariantDrawer({ product, onClose }: Props) {
@@ -38,7 +50,7 @@ export function ProductVariantDrawer({ product, onClose }: Props) {
     .filter((g) => g.selection_type === "single_required")
     .every((g) => skuSelections[g.id])
 
-  const unitPrice = computeItemUnitPrice(product, skuSelections)
+  const { sku_id: resolvedSkuId, unit_price: unitPrice } = resolveVariantSku(product, skuSelections)
 
   function handleSkuSelect(group: ProductVariantGroup, option: ProductVariantOption) {
     setSkuSelections((prev) => ({ ...prev, [group.id]: option.id }))
@@ -63,11 +75,10 @@ export function ProductVariantDrawer({ product, onClose }: Props) {
 
   function handleAddToCart() {
     if (!product || !allRequiredSelected) return
-    const variant_sku_id = buildVariantSkuId(product, skuSelections)
     addItem({
       product_id: product.id,
       product,
-      variant_sku_id,
+      variant_sku_id: resolvedSkuId,
       sku_selections: skuSelections,
       addon_selections: addonSelections,
       quantity,

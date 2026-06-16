@@ -30,6 +30,7 @@ export type {
   Product,
   ProductVariantGroup,
   ProductVariantOption,
+  ProductVariantSku,
   CartItem,
   CheckoutForm,
   EstimateResult,

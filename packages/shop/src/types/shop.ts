@@ -19,6 +19,18 @@ export interface ProductVariantGroup {
   options: ProductVariantOption[]
 }
 
+export interface ProductVariantSku {
+  id: string
+  product_id: string
+  combination_key: string
+  /** IDs of the options that make up this combination */
+  option_ids: string[]
+  price_override: string | null
+  stock: number
+  available_stock: number
+  sku: string | null
+}
+
 export interface Product {
   id: string
   place_id: string
@@ -38,6 +50,8 @@ export interface Product {
   is_active: boolean
   sort_order: number
   variant_groups?: ProductVariantGroup[]
+  /** Server-side SKU matrix for affects_stock combinations */
+  variant_skus?: ProductVariantSku[]
 }
 
 export interface CartItem {
