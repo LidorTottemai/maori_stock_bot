@@ -41,6 +41,19 @@ def create_db_and_tables() -> None:
     import app.models.rebuild_job  # noqa: F401
     import app.models.scan_job  # noqa: F401
 
+    # Phase 9 — E-commerce
+    import app.models.site  # noqa: F401
+    import app.models.shop_product_category  # noqa: F401
+    import app.models.shop_product  # noqa: F401
+    import app.models.shop_product_variant  # noqa: F401
+    import app.models.shop_inventory  # noqa: F401
+    import app.models.shop_order  # noqa: F401
+    import app.models.shop_payment  # noqa: F401
+    import app.models.shop_coupon  # noqa: F401
+    import app.models.shop_customer  # noqa: F401
+    import app.models.shop_staff  # noqa: F401
+    import app.models.shop_digital  # noqa: F401
+
     SQLModel.metadata.create_all(get_engine())
     _apply_migrations(get_engine())
 

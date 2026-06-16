@@ -77,4 +77,17 @@ def setup_scheduler(app: FastAPI) -> AsyncIOScheduler:
         replace_existing=True,
     )
 
+    from apscheduler.triggers.interval import IntervalTrigger
+
+    def _release_reservations_job() -> None:
+        from app.services.reservation_cleanup import release_expired_reservations
+        release_expired_reservations()
+
+    scheduler.add_job(
+        _release_reservations_job,
+        trigger=IntervalTrigger(seconds=60),
+        id="release_expired_reservations",
+        replace_existing=True,
+    )
+
     return scheduler

@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     quality_min_score: int = 8
     quality_max_attempts: int = 3
 
+    # E-commerce / Shop
+    jwt_secret: str = "change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expiry_days: int = 7
+    tranzila_terminal: str = "0000000"
+    tranzila_success_pass: str = ""
+    shop_default_tax_rate: str = "0.17"       # 17% VAT Israel
+    shop_reservation_minutes: int = 15
+
 
 @lru_cache
 def get_settings() -> Settings:
