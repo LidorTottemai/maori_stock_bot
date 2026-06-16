@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Globe, Clock, Search, Mail } from "lucide-react"
+import { LayoutDashboard, Globe, Clock, Search, ShoppingBag } from "lucide-react"
 import clsx from "clsx"
 
 const NAV_LINKS = [
@@ -10,7 +10,7 @@ const NAV_LINKS = [
   { href: "/sites", label: "אתרים", icon: Globe },
   { href: "/queue", label: "תור", icon: Clock },
   { href: "/leads", label: "לידים", icon: Search },
-  { href: "/outreach", label: "Outreach", icon: Mail },
+  { href: "/shop/orders", label: "חנות", icon: ShoppingBag },
 ]
 
 export default function BottomNav() {

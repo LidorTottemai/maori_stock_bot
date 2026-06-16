@@ -72,6 +72,68 @@ export interface OutreachItem {
   category: string
 }
 
+// ── Shop Types ─────────────────────────────────────────────────────────────────
+
+export interface ShopOrder {
+  id: string
+  order_number: string
+  customer_name: string
+  customer_email: string
+  customer_phone: string
+  order_status: string
+  payment_status: string
+  fulfillment_status: string
+  order_type: string
+  payment_mode: string
+  total: string
+  subtotal: string
+  discount: string
+  shipping_fee: string
+  tracking_number: string | null
+  notes: string | null
+  created_at: string
+  cancelled_at: string | null
+  cancellation_reason: string | null
+}
+
+export interface ShopProduct {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  price: string
+  compare_price: string | null
+  currency: string
+  sku: string | null
+  stock: number
+  available_stock: number
+  is_active: boolean
+  deleted_at: string | null
+  image_urls: string[]
+  product_type: string
+  track_inventory: boolean
+  allow_backorder: boolean
+  sort_order: number
+  created_at: string
+}
+
+export interface ShopProductCreate {
+  name: string
+  slug: string
+  price: number
+  description?: string | null
+  stock?: number
+  is_active?: boolean
+  product_type?: string
+  currency?: string
+  image_urls?: string[]
+  tags?: string[]
+  track_inventory?: boolean
+  allow_backorder?: boolean
+  requires_shipping?: boolean
+  sort_order?: number
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function fetchJson<T>(path: string): Promise<T> {
@@ -80,6 +142,27 @@ async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(proxyPath)
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${res.statusText}`)
+  }
+  return res.json() as Promise<T>
+}
+
+async function fetchMutation<T>(
+  path: string,
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
+  body?: unknown,
+): Promise<T> {
+  const proxyPath = path.replace("/api/v1/", "/api/proxy/")
+  const res = await fetch(proxyPath, {
+    method,
+    headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err?.detail ?? `API error ${res.status}`)
+  }
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T
   }
   return res.json() as Promise<T>
 }
@@ -125,4 +208,55 @@ export const api = {
     fetch(`/api/proxy/rebuild/${jobId}`, {
       method: "DELETE",
     }),
+
+  // ── Shop ───────────────────────────────────────────────────────────────────
+
+  shopOrders: (params?: {
+    order_status?: string
+    fulfillment_status?: string
+    payment_status?: string
+    order_type?: string
+  }): Promise<ShopOrder[]> => {
+    const qs = new URLSearchParams()
+    if (params?.order_status) qs.set("order_status", params.order_status)
+    if (params?.fulfillment_status) qs.set("fulfillment_status", params.fulfillment_status)
+    if (params?.payment_status) qs.set("payment_status", params.payment_status)
+    if (params?.order_type) qs.set("order_type", params.order_type)
+    const query = qs.toString() ? `?${qs.toString()}` : ""
+    return fetchJson<ShopOrder[]>(`/api/v1/shop-orders/admin/${query}`)
+  },
+
+  shopUpdateFulfillment: (orderId: string, fulfillmentStatus: string): Promise<ShopOrder> =>
+    fetchMutation<ShopOrder>(
+      `/api/v1/shop-orders/${orderId}/fulfillment`,
+      "PUT",
+      { fulfillment_status: fulfillmentStatus },
+    ),
+
+  shopCancelOrder: (orderId: string, reason: string): Promise<unknown> =>
+    fetchMutation<unknown>(
+      `/api/v1/shop-orders/${orderId}/cancel`,
+      "POST",
+      { reason },
+    ),
+
+  shopProducts: (params?: { search?: string; is_active?: boolean }): Promise<ShopProduct[]> => {
+    const qs = new URLSearchParams()
+    if (params?.search) qs.set("search", params.search)
+    if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active))
+    const query = qs.toString() ? `?${qs.toString()}` : ""
+    return fetchJson<ShopProduct[]>(`/api/v1/products/admin/${query}`)
+  },
+
+  shopUpdateStock: (productId: string, stock: number): Promise<ShopProduct> =>
+    fetchMutation<ShopProduct>(`/api/v1/products/${productId}/stock`, "PATCH", { stock }),
+
+  shopToggleActive: (productId: string, isActive: boolean): Promise<ShopProduct> =>
+    fetchMutation<ShopProduct>(`/api/v1/products/${productId}`, "PUT", { is_active: isActive }),
+
+  shopDeleteProduct: (productId: string): Promise<void> =>
+    fetchMutation<void>(`/api/v1/products/${productId}`, "DELETE"),
+
+  shopCreateProduct: (body: ShopProductCreate): Promise<ShopProduct> =>
+    fetchMutation<ShopProduct>(`/api/v1/products/`, "POST", body),
 }

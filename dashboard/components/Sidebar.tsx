@@ -10,6 +10,8 @@ import {
   Search,
   Mail,
   LogOut,
+  PackageSearch,
+  ShoppingBag,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -19,6 +21,11 @@ const NAV_LINKS = [
   { href: "/queue", label: "תור בנייה", icon: Clock },
   { href: "/leads", label: "לידים", icon: Search },
   { href: "/outreach", label: "Outreach", icon: Mail },
+]
+
+const SHOP_LINKS = [
+  { href: "/shop/orders", label: "הזמנות", icon: PackageSearch },
+  { href: "/shop/products", label: "מוצרים", icon: ShoppingBag },
 ]
 
 export default function Sidebar() {
@@ -57,40 +64,82 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_LINKS.map(({ href, label, icon: Icon }) => {
-          const active = isActive(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={clsx(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group relative",
-                active
-                  ? "text-h-fuchsia bg-[rgba(255,0,110,0.08)]"
-                  : "text-h-muted hover:text-h-text hover:bg-white/5"
-              )}
-            >
-              {/* Active left border indicator (appears on right in RTL but we want left visually) */}
-              {active && (
-                <span
-                  className="absolute right-0 top-1 bottom-1 rounded-full bg-h-fuchsia"
-                  style={{ width: 2 }}
-                />
-              )}
-              <Icon
-                size={17}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        <div className="space-y-1">
+          {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href)
+            return (
+              <Link
+                key={href}
+                href={href}
                 className={clsx(
-                  "transition-colors",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group relative",
                   active
-                    ? "text-h-fuchsia"
-                    : "text-h-muted group-hover:text-h-text"
+                    ? "text-h-fuchsia bg-[rgba(255,0,110,0.08)]"
+                    : "text-h-muted hover:text-h-text hover:bg-white/5"
                 )}
-              />
-              <span>{label}</span>
-            </Link>
-          )
-        })}
+              >
+                {active && (
+                  <span
+                    className="absolute right-0 top-1 bottom-1 rounded-full bg-h-fuchsia"
+                    style={{ width: 2 }}
+                  />
+                )}
+                <Icon
+                  size={17}
+                  className={clsx(
+                    "transition-colors",
+                    active
+                      ? "text-h-fuchsia"
+                      : "text-h-muted group-hover:text-h-text"
+                  )}
+                />
+                <span>{label}</span>
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Shop section */}
+        <div className="mt-5 pt-4 border-t border-h-border">
+          <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-h-muted opacity-60">
+            חנות
+          </p>
+          <div className="space-y-1">
+            {SHOP_LINKS.map(({ href, label, icon: Icon }) => {
+              const active = isActive(href)
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={clsx(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group relative",
+                    active
+                      ? "text-h-fuchsia bg-[rgba(255,0,110,0.08)]"
+                      : "text-h-muted hover:text-h-text hover:bg-white/5"
+                  )}
+                >
+                  {active && (
+                    <span
+                      className="absolute right-0 top-1 bottom-1 rounded-full bg-h-fuchsia"
+                      style={{ width: 2 }}
+                    />
+                  )}
+                  <Icon
+                    size={17}
+                    className={clsx(
+                      "transition-colors",
+                      active
+                        ? "text-h-fuchsia"
+                        : "text-h-muted group-hover:text-h-text"
+                    )}
+                  />
+                  <span>{label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
       </nav>
 
       {/* Sign out */}

@@ -196,6 +196,35 @@ def get_product(
 # Admin endpoints
 # ---------------------------------------------------------------------------
 
+@router.get("/admin/", dependencies=[Depends(require_roles("owner", "admin", "manager", "cashier", "viewer"))])
+def list_products_admin(
+    search: str | None = Query(default=None),
+    is_active: bool | None = Query(default=None),
+    in_stock: bool | None = Query(default=None),
+    limit: int = Query(default=100, le=500),
+    offset: int = Query(default=0),
+    place_id: str = Depends(get_admin_place_id),
+    session: Session = Depends(get_session),
+) -> list[dict]:
+    """Admin product list — uses JWT place_id, includes soft-deleted products."""
+    stmt = select(Product).where(Product.place_id == place_id)
+    if search:
+        stmt = stmt.where(Product.name.contains(search))
+    if is_active is not None:
+        stmt = stmt.where(Product.is_active == is_active)
+    if in_stock is True:
+        stmt = stmt.where(Product.stock > 0)
+    stmt = stmt.order_by(Product.sort_order, Product.created_at.desc()).offset(offset).limit(limit)
+
+    result = []
+    for p in session.exec(stmt).all():
+        reserved = get_active_reserved_qty(session, p.id) if p.track_inventory else 0
+        d = p.model_dump()
+        d["available_stock"] = max(0, p.stock - reserved)
+        result.append(d)
+    return result
+
+
 @router.post("/", dependencies=[Depends(require_roles("owner", "admin", "manager"))])
 def create_product(
     body: ProductCreate,
