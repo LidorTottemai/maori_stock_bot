@@ -177,6 +177,11 @@ export interface ShopCouponCreate {
   applies_to_all_products?: boolean
 }
 
+export interface PresignResponse {
+  upload_url: string
+  public_url: string
+}
+
 export interface ShopAnalyticsSummary {
   total_orders: number
   paid_orders: number
@@ -331,6 +336,17 @@ export const api = {
 
   shopCreateProduct: (body: ShopProductCreate): Promise<ShopProduct> =>
     fetchMutation<ShopProduct>(`/api/v1/products/`, "POST", body),
+
+  shopPresignImage: (filename: string, contentType: string): Promise<PresignResponse> =>
+    fetchMutation<PresignResponse>(`/api/v1/products/images/presign`, "POST", {
+      filename,
+      content_type: contentType,
+    }),
+
+  shopUpdateProductImages: (productId: string, imageUrls: string[]): Promise<ShopProduct> =>
+    fetchMutation<ShopProduct>(`/api/v1/products/${productId}`, "PUT", {
+      image_urls: imageUrls,
+    }),
 
   // ── Customers ──────────────────────────────────────────────────────────────
 

@@ -42,6 +42,10 @@ class Settings(BaseSettings):
 
     # E-commerce / Shop
     jwt_secret: str = "change-me-in-production"
+    # GCS image uploads
+    gcs_bucket_name: str | None = None
+    gcs_credentials_json: str | None = None   # full service account JSON as a string
+    cdn_base_url: str | None = None           # e.g. https://cdn.example.com (no trailing slash)
     jwt_algorithm: str = "HS256"
     jwt_expiry_days: int = 7
     tranzila_terminal: str = "0000000"

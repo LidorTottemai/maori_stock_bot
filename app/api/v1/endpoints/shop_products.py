@@ -9,7 +9,9 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.api.deps import get_admin_place_id, get_public_place_id, require_roles
+from app.core.config import get_settings
 from app.core.database import get_session
+from app.services import gcs as gcs_service
 from app.models.shop_product import Product
 from app.models.shop_product_variant import (
     ProductVariantGroup,
@@ -105,6 +107,39 @@ class VariantSkuPatch(BaseModel):
     stock: int | None = None
     price_override: Decimal | None = None
     sku: str | None = None
+
+
+class PresignRequest(BaseModel):
+    filename: str
+    content_type: str
+
+
+class PresignResponse(BaseModel):
+    upload_url: str
+    public_url: str
+
+
+# ---------------------------------------------------------------------------
+# Image upload presign
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/images/presign",
+    response_model=PresignResponse,
+    dependencies=[Depends(require_roles("owner", "admin", "manager"))],
+)
+def presign_product_image(
+    body: PresignRequest,
+    place_id: str = Depends(get_admin_place_id),
+) -> PresignResponse:
+    """Generate a GCS V4 signed PUT URL for direct browser-to-GCS image upload."""
+    signed_url, public_url = gcs_service.generate_upload_signed_url(
+        place_id=place_id,
+        filename=body.filename,
+        content_type=body.content_type,
+        settings=get_settings(),
+    )
+    return PresignResponse(upload_url=signed_url, public_url=public_url)
 
 
 # ---------------------------------------------------------------------------
