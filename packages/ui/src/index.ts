@@ -21,3 +21,9 @@ export type { DrawerProps } from "./components/Drawer"
 
 export { Stepper } from "./components/Stepper"
 export type { StepperProps } from "./components/Stepper"
+
+export { Card } from "./components/Card"
+export type { CardProps } from "./components/Card"
+
+export { QuantityStepper } from "./components/QuantityStepper"
+export type { QuantityStepperProps } from "./components/QuantityStepper"

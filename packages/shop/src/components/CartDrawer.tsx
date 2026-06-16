@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Button, Drawer } from "@tottemai/ui"
+import { Button, Drawer, QuantityStepper } from "@tottemai/ui"
 import { useCart } from "../context/CartContext"
 
 interface Props {
@@ -40,25 +40,14 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
                     {parseFloat(item.unit_price).toFixed(2)} {item.product.currency}
                   </p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => updateQuantity(item.product_id, item.variant_sku_id, item.quantity - 1)}
-                    aria-label="הפחת כמות"
-                  >
-                    −
-                  </Button>
-                  <span style={{ minWidth: "1.5rem", textAlign: "center" }}>{item.quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => updateQuantity(item.product_id, item.variant_sku_id, item.quantity + 1)}
-                    aria-label="הוסף כמות"
-                  >
-                    +
-                  </Button>
-                </div>
+                <QuantityStepper
+                  value={item.quantity}
+                  min={0}
+                  onChange={(q) => {
+                    if (q === 0) removeItem(item.product_id, item.variant_sku_id)
+                    else updateQuantity(item.product_id, item.variant_sku_id, q)
+                  }}
+                />
                 <Button
                   variant="ghost"
                   size="sm"

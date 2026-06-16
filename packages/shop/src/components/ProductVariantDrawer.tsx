@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Button, Drawer } from "@tottemai/ui"
+import { Button, Drawer, QuantityStepper } from "@tottemai/ui"
 import type { Product, ProductVariantGroup, ProductVariantOption } from "../types/shop"
 import { useCart } from "../context/CartContext"
 import { computeItemUnitPrice } from "../utils/price"
@@ -160,11 +160,7 @@ export function ProductVariantDrawer({ product, onClose }: Props) {
         </div>
       ))}
 
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <Button variant="ghost" size="sm" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</Button>
-        <span style={{ fontWeight: 600, minWidth: "1.5rem", textAlign: "center" }}>{quantity}</span>
-        <Button variant="ghost" size="sm" onClick={() => setQuantity((q) => q + 1)}>+</Button>
-      </div>
+      <QuantityStepper value={quantity} onChange={setQuantity} />
 
       <Button
         variant="primary"
