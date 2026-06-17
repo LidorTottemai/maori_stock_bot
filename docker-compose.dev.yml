@@ -1,0 +1,20 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - api_data:/data
+    environment:
+      DB_URL: sqlite:////data/dev.db
+      TZ: Asia/Jerusalem
+      JWT_SECRET: dev-secret-key-change-in-prod
+    env_file:
+      - path: .env.dev
+        required: false
+
+volumes:
+  api_data:

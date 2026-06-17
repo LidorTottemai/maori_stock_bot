@@ -1,4 +1,4 @@
-.PHONY: up down logs deploy shell build claude-auth scan rebuild report
+.PHONY: up down logs deploy shell build claude-auth scan rebuild report dev dev-down setup-local bootstrap
 
 build:
 	docker compose build
@@ -43,3 +43,24 @@ rebuild:
 # שליחת דוח לטלגרם עכשיו
 report:
 	curl -s -X POST http://localhost:8000/api/v1/rebuild/send-report | python3 -m json.tool
+
+# ─── Local dev (Docker, no Python required on host) ──────────────────────────
+dev:
+	docker compose -f docker-compose.dev.yml up --build
+
+dev-down:
+	docker compose -f docker-compose.dev.yml down
+
+# יצירת .env.local לדאשבורד ולחנות
+setup-local:
+	@printf "NEXT_PUBLIC_API_URL=http://localhost:8000\n" > apps/client-site/.env.local
+	@printf "NEXTAUTH_URL=http://localhost:3000\nNEXTAUTH_SECRET=dev-nextauth-secret\nNEXT_PUBLIC_API_URL=http://localhost:8000\nAPI_BASE_URL=http://localhost:8000\n" > dashboard/.env.local
+	@echo "✅ .env.local files created"
+
+# יצירת מנהל ראשון (הרץ פעם אחת לאחר make dev)
+bootstrap:
+	@echo "Creating first owner account..."
+	@curl -s -X POST http://localhost:8000/api/v1/staff/bootstrap \
+	  -H "Content-Type: application/json" \
+	  -d '{"email":"admin@demo.com","password":"Admin1234!","name":"Admin"}' \
+	  | python3 -m json.tool

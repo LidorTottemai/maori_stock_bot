@@ -67,6 +67,48 @@ class RoleUpdate(BaseModel):
     role: str
 
 
+class BootstrapRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap (first-run only — 409 once any staff exist)
+# ---------------------------------------------------------------------------
+
+@router.post("/bootstrap")
+def bootstrap_first_owner(
+    body: BootstrapRequest,
+    session: Session = Depends(get_session),
+) -> dict:
+    existing = session.exec(select(StaffUser).limit(1)).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Bootstrap already done — staff exists")
+
+    place_id = "demo"
+    from app.models.site import Site
+    if not session.get(Site, place_id):
+        session.add(Site(place_id=place_id, hostname="localhost"))
+
+    owner = StaffUser(
+        place_id=place_id,
+        name=body.name,
+        email=body.email,
+        normalized_email=body.email.strip().lower(),
+        hashed_password=_hash_password(body.password),
+        role="owner",
+        is_active=True,
+        created_at=datetime.utcnow(),
+    )
+    session.add(owner)
+    session.commit()
+    session.refresh(owner)
+
+    token = create_staff_token(owner)
+    return {"message": "Bootstrap complete", "access_token": token, "place_id": place_id}
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
